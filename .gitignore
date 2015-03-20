@@ -230,4 +230,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 bin/*
-
+glslang/UserM_Debug/*
+glslang/UserM_Release/*
+glslang/MachineIndependent/glslang_tab.cpp
+glslang/MachineIndependent/glslang_tab.cpp.h
+UserM_Debug/*
+UserM_Release/*
