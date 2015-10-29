@@ -40,6 +40,7 @@
 #include "../Include/Common.h"
 #include "../Include/BaseTypes.h"
 #include "../Public/ShaderLang.h"
+#include "arrays.h"
 
 namespace glslang {
 
@@ -169,29 +170,6 @@ typedef TVector<TTypeLoc> TTypeList;
 typedef TVector<TString*> TIdentifierList;
 
 //
-// TODO: memory: TArraySizes can be replaced by something smaller.
-// Almost all arrays could be handled by two sizes each fitting
-// in 16 bits, needing a real vector only in the cases where there
-// are more than 3 sizes or a size needing more than 16 bits.
-//
-// The type is a pointer, so that it can be non-allocated and zero
-// for the vast majority of non-array types.  Note that means if it
-// is used, it will be containing at least one size.
-
-struct TArraySizes {
-    POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
-
-    TArraySizes() : implicitArraySize(1) { }
-    int getSize() { return sizes.front(); }  // TArraySizes only exists if there is at least one dimension
-    void setSize(int s) { sizes.push_back(s); }
-    bool isArrayOfArrays() { return sizes.size() > 1; }
-protected:
-    TVector<int> sizes;
-    friend class TType;
-    int implicitArraySize; // for tracking maximum referenced index, before an explicit size is given
-};
-
-//
 // Following are a series of helper enums for managing layouts and qualifiers,
 // used for TPublicType, TType, others.
 //
@@ -298,6 +276,7 @@ enum TLayoutFormat {
 
     ElfRg32ui,
     ElfRg16ui,
+    ElfRgb10a2ui,
     ElfRg8ui,
     ElfR16ui,
     ElfR8ui,
@@ -315,6 +294,30 @@ enum TLayoutDepth {
     EldCount
 };
 
+enum TBlendEquationShift {
+    // No 'EBlendNone':
+    // These are used as bit-shift amounts.  A mask of such shifts will have type 'int',
+    // and in that space, 0 means no bits set, or none.  In this enum, 0 means (1 << 0), a bit is set.
+    EBlendMultiply,
+    EBlendScreen,
+    EBlendOverlay,
+    EBlendDarken,
+    EBlendLighten,
+    EBlendColordodge,
+    EBlendColorburn,
+    EBlendHardlight,
+    EBlendSoftlight,
+    EBlendDifference,
+    EBlendExclusion,
+    EBlendHslHue,
+    EBlendHslSaturation,
+    EBlendHslColor,
+    EBlendHslLuminosity,
+    EBlendAllEquations,
+
+    EBlendCount
+};
+
 class TQualifier {
 public:
     void clear()
@@ -328,6 +331,7 @@ public:
     void makeTemporary()
     {
         storage   = EvqTemporary;
+        builtIn   = EbvNone;
         centroid  = false;
         smooth    = false;
         flat      = false;
@@ -343,6 +347,7 @@ public:
     }
 
     TStorageQualifier   storage   : 6;
+    TBuiltInVariable    builtIn   : 8;
     TPrecisionQualifier precision : 3;
     bool invariant : 1;
     bool centroid  : 1;
@@ -508,8 +513,8 @@ public:
     int layoutOffset;
     int layoutAlign;
 
-                 unsigned int layoutLocation         : 7;
-    static const unsigned int layoutLocationEnd =   0x3F;
+                 unsigned int layoutLocation         :12;
+    static const unsigned int layoutLocationEnd =  0xFFF;
 
                  unsigned int layoutComponent        : 3;
     static const unsigned int layoutComponentEnd =     4;
@@ -569,7 +574,7 @@ public:
     }
     bool hasLocation() const
     {
-        return layoutLocation  != layoutLocationEnd;
+        return layoutLocation != layoutLocationEnd;
     }
     bool hasComponent() const
     {
@@ -670,6 +675,7 @@ public:
         case ElfRgba8ui:      return "rgba8ui";
         case ElfRg32ui:       return "rg32ui";
         case ElfRg16ui:       return "rg16ui";
+        case ElfRgb10a2ui:    return "rgb10a2ui";
         case ElfRg8ui:        return "rg8ui";
         case ElfR32ui:        return "r32ui";
         case ElfR16ui:        return "r16ui";
@@ -685,6 +691,28 @@ public:
         case EldLess:      return "depth_less";
         case EldUnchanged: return "depth_unchanged";
         default:           return "none";
+        }
+    }
+    static const char* getBlendEquationString(TBlendEquationShift e)
+    {
+        switch (e) {
+        case EBlendMultiply:      return "blend_support_multiply";
+        case EBlendScreen:        return "blend_support_screen";
+        case EBlendOverlay:       return "blend_support_overlay";
+        case EBlendDarken:        return "blend_support_darken";
+        case EBlendLighten:       return "blend_support_lighten";
+        case EBlendColordodge:    return "blend_support_colordodge";
+        case EBlendColorburn:     return "blend_support_colorburn";
+        case EBlendHardlight:     return "blend_support_hardlight";
+        case EBlendSoftlight:     return "blend_support_softlight";
+        case EBlendDifference:    return "blend_support_difference";
+        case EBlendExclusion:     return "blend_support_exclusion";
+        case EBlendHslHue:        return "blend_support_hsl_hue";
+        case EBlendHslSaturation: return "blend_support_hsl_saturation";
+        case EBlendHslColor:      return "blend_support_hsl_color";
+        case EBlendHslLuminosity: return "blend_support_hsl_luminosity";
+        case EBlendAllEquations:  return "blend_support_all_equations";
+        default:                  return "unknown";
         }
     }
     static const char* getGeometryString(TLayoutGeometry geometry)
@@ -746,6 +774,7 @@ struct TShaderQualifiers {
     int localSize[3];         // compute shader
     bool earlyFragmentTests;  // fragment input
     TLayoutDepth layoutDepth;
+    bool blendEquation;       // true if any blend equation was specified
 
     void init()
     {
@@ -762,6 +791,7 @@ struct TShaderQualifiers {
         localSize[2] = 1;
         earlyFragmentTests = false;
         layoutDepth = EldNone;
+        blendEquation = false;
     }
 
     // Merge in characteristics from the 'src' qualifier.  They can override when
@@ -792,6 +822,8 @@ struct TShaderQualifiers {
             earlyFragmentTests = true;
         if (src.layoutDepth)
             layoutDepth = src.layoutDepth;
+        if (src.blendEquation)
+            blendEquation = src.blendEquation;
     }
 };
 
@@ -816,14 +848,14 @@ public:
     const TType* userDef;
     TSourceLoc loc;
 
-    void initType(TSourceLoc l)
+    void initType(const TSourceLoc& l)
     {
         basicType = EbtVoid;
         vectorSize = 1;
         matrixRows = 0;
         matrixCols = 0;
-        arraySizes = 0;
-        userDef = 0;
+        arraySizes = nullptr;
+        userDef = nullptr;
         loc = l;
     }
 
@@ -834,7 +866,7 @@ public:
             qualifier.storage = EvqGlobal;
     }
 
-    void init(TSourceLoc loc, bool global = false)
+    void init(const TSourceLoc& loc, bool global = false)
     {
         initType(loc);
         sampler.clear();
@@ -858,7 +890,7 @@ public:
 
     bool isScalar() const
     {
-        return matrixCols == 0 && vectorSize == 1 && arraySizes == 0 && userDef == 0;
+        return matrixCols == 0 && vectorSize == 1 && arraySizes == nullptr && userDef == nullptr;
     }
 
     bool isImage() const
@@ -866,9 +898,6 @@ public:
         return basicType == EbtSampler && sampler.image;
     }
 };
-
-typedef std::map<TTypeList*, TTypeList*> TStructureMap;
-typedef std::map<TTypeList*, TTypeList*>::const_iterator TStructureMapIterator;
 
 //
 // Base class for things that have a type.
@@ -879,8 +908,8 @@ public:
 
     // for "empty" type (no args) or simple scalar/vector/matrix
     explicit TType(TBasicType t = EbtVoid, TStorageQualifier q = EvqTemporary, int vs = 1, int mc = 0, int mr = 0) :
-                            basicType(t), vectorSize(vs), matrixCols(mc), matrixRows(mr), arraySizes(0),
-                            structure(0), fieldName(0), typeName(0)
+                            basicType(t), vectorSize(vs), matrixCols(mc), matrixRows(mr), arraySizes(nullptr),
+                            structure(nullptr), fieldName(nullptr), typeName(nullptr)
                             {
                                 sampler.clear();
                                 qualifier.clear();
@@ -888,8 +917,8 @@ public:
                             }
     // for explicit precision qualifier
     TType(TBasicType t, TStorageQualifier q, TPrecisionQualifier p, int vs = 1, int mc = 0, int mr = 0) :
-                            basicType(t), vectorSize(vs), matrixCols(mc), matrixRows(mr), arraySizes(0),
-                            structure(0), fieldName(0), typeName(0)
+                            basicType(t), vectorSize(vs), matrixCols(mc), matrixRows(mr), arraySizes(nullptr),
+                            structure(nullptr), fieldName(nullptr), typeName(nullptr)
                             {
                                 sampler.clear();
                                 qualifier.clear();
@@ -900,7 +929,7 @@ public:
     // for turning a TPublicType into a TType
     explicit TType(const TPublicType& p) :
                             basicType(p.basicType), vectorSize(p.vectorSize), matrixCols(p.matrixCols), matrixRows(p.matrixRows), arraySizes(p.arraySizes),
-                            structure(0), fieldName(0), typeName(0)
+                            structure(nullptr), fieldName(nullptr), typeName(nullptr)
                             {
                                 if (basicType == EbtSampler)
                                     sampler = p.sampler;
@@ -917,21 +946,38 @@ public:
     // and using only shallow copy
     TType(const TType& type, int derefIndex, bool rowMajor = false)
                             {
-                                if (! type.isArray() && (type.basicType == EbtStruct || type.basicType == EbtBlock)) {
+                                if (type.isArray()) {
+                                    shallowCopy(type);
+                                    if (type.getArraySizes()->getNumDims() == 1) {
+                                        arraySizes = nullptr;
+                                    } else {
+                                        // want our own copy of the array, so we can edit it
+                                        arraySizes = new TArraySizes;
+                                        arraySizes->copyDereferenced(*type.arraySizes);
+                                    }
+                                } else if (type.basicType == EbtStruct || type.basicType == EbtBlock) {
                                     // do a structure dereference
                                     const TTypeList& memberList = *type.getStruct();
                                     shallowCopy(*memberList[derefIndex].type);
                                     return;
                                 } else {
-                                    // do an array/vector/matrix dereference
+                                    // do a vector/matrix dereference
                                     shallowCopy(type);
-                                    dereference(rowMajor);
+                                    if (matrixCols > 0) {
+                                        if (rowMajor)
+                                            vectorSize = matrixCols;
+                                        else
+                                            vectorSize = matrixRows;
+                                        matrixCols = 0;
+                                        matrixRows = 0;
+                                    } else if (vectorSize > 1)
+                                        vectorSize = 1;
                                 }
                             }
     // for making structures, ...
     TType(TTypeList* userDef, const TString& n) :
                             basicType(EbtStruct), vectorSize(1), matrixCols(0), matrixRows(0),
-                            arraySizes(0), structure(userDef), fieldName(0)
+                            arraySizes(nullptr), structure(userDef), fieldName(nullptr)
                             {
                                 sampler.clear();
                                 qualifier.clear();
@@ -940,7 +986,7 @@ public:
     // For interface blocks
     TType(TTypeList* userDef, const TString& n, const TQualifier& q) : 
                             basicType(EbtBlock), vectorSize(1), matrixCols(0), matrixRows(0),
-                            qualifier(q), arraySizes(0), structure(userDef), fieldName(0)
+                            qualifier(q), arraySizes(nullptr), structure(userDef), fieldName(nullptr)
                             {
                                 sampler.clear();
                                 typeName = NewPoolTString(n.c_str());
@@ -958,7 +1004,7 @@ public:
         vectorSize = copyOf.vectorSize;
         matrixCols = copyOf.matrixCols;
         matrixRows = copyOf.matrixRows;
-        arraySizes = copyOf.arraySizes;
+        arraySizes = copyOf.arraySizes;  // copying the pointer only, not the contents
         structure = copyOf.structure;
         fieldName = copyOf.fieldName;
         typeName = copyOf.typeName;
@@ -975,7 +1021,6 @@ public:
 
         if (copyOf.structure) {
             structure = new TTypeList;
-            TStructureMapIterator iter;
             for (unsigned int i = 0; i < copyOf.structure->size(); ++i) {
                 TTypeLoc typeLoc;
                 typeLoc.loc = (*copyOf.structure)[i].loc;
@@ -1012,26 +1057,11 @@ public:
         qualifier = parentType.qualifier;
         sampler = parentType.sampler;
         if (parentType.arraySizes)
-            setArraySizes(parentType.arraySizes);
+            newArraySizes(*parentType.arraySizes);
         if (parentType.userDef) {
             structure = parentType.userDef->getWritableStruct();
             setTypeName(parentType.userDef->getTypeName());
         }
-    }
-
-    virtual void dereference(bool rowMajor = false)
-    {
-        if (arraySizes)
-            arraySizes = 0;
-        else if (matrixCols > 0) {
-            if (rowMajor)
-                vectorSize = matrixCols;
-            else
-                vectorSize = matrixRows;
-            matrixCols = 0;
-            matrixRows = 0;
-        } else if (vectorSize > 1)
-            vectorSize = 1;
     }
 
     virtual void hideMember() { basicType = EbtVoid; vectorSize = 1; }
@@ -1060,18 +1090,21 @@ public:
     virtual int getVectorSize() const { return vectorSize; }
     virtual int getMatrixCols() const { return matrixCols; }
     virtual int getMatrixRows() const { return matrixRows; }
-    virtual int getArraySize()  const { return arraySizes->sizes.front(); }
-    virtual bool isArrayOfArrays() const { return arraySizes && arraySizes->isArrayOfArrays(); }
-    virtual int getImplicitArraySize () const { return arraySizes->implicitArraySize; }
+    virtual int getOuterArraySize()  const { return arraySizes->getOuterSize(); }
+    virtual int getCumulativeArraySize()  const { return arraySizes->getCumulativeSize(); }
+    virtual bool isArrayOfArrays() const { return arraySizes != nullptr && arraySizes->getNumDims() > 1; }
+    virtual int getImplicitArraySize() const { return arraySizes->getImplicitSize(); }
+    virtual const TArraySizes* getArraySizes() const { return arraySizes; }
+    virtual       TArraySizes& getArraySizes()       { assert(arraySizes != nullptr); return *arraySizes; }
 
     virtual bool isScalar() const { return vectorSize == 1 && ! isStruct() && ! isArray(); }
     virtual bool isVector() const { return vectorSize > 1; }
     virtual bool isMatrix() const { return matrixCols ? true : false; }
-    virtual bool isArray()  const { return arraySizes != 0; }
-    virtual bool isImplicitlySizedArray() const { return isArray() && ! getArraySize() && qualifier.storage != EvqBuffer; }
-    virtual bool isExplicitlySizedArray() const { return isArray() && getArraySize(); }
-    virtual bool isRuntimeSizedArray() const { return isArray() && ! getArraySize() && qualifier.storage == EvqBuffer; }
-    virtual bool isStruct() const { return structure != 0; }
+    virtual bool isArray()  const { return arraySizes != nullptr; }
+    virtual bool isExplicitlySizedArray() const { return isArray() && getOuterArraySize() != UnsizedArraySize; }
+    virtual bool isImplicitlySizedArray() const { return isArray() && getOuterArraySize() == UnsizedArraySize && qualifier.storage != EvqBuffer; }
+    virtual bool isRuntimeSizedArray()    const { return isArray() && getOuterArraySize() == UnsizedArraySize && qualifier.storage == EvqBuffer; }
+    virtual bool isStruct() const { return structure != nullptr; }
     virtual bool isImage() const { return basicType == EbtSampler && getSampler().image; }
 
     // Recursively checks if the type contains the given basic type
@@ -1093,7 +1126,7 @@ public:
     {
         if (isArray())
             return true;
-        if (! structure)
+        if (structure == nullptr)
             return false;
         for (unsigned int i = 0; i < structure->size(); ++i) {
             if ((*structure)[i].type->containsArray())
@@ -1105,7 +1138,7 @@ public:
     // Check the structure for any structures, needed for some error checks
     virtual bool containsStructure() const
     {
-        if (! structure)
+        if (structure == nullptr)
             return false;
         for (unsigned int i = 0; i < structure->size(); ++i) {
             if ((*structure)[i].type->structure)
@@ -1119,10 +1152,23 @@ public:
     {
         if (isImplicitlySizedArray())
             return true;
-        if (! structure)
+        if (structure == nullptr)
             return false;
         for (unsigned int i = 0; i < structure->size(); ++i) {
             if ((*structure)[i].type->containsImplicitlySizedArray())
+                return true;
+        }
+        return false;
+    }
+
+    virtual bool containsOpaque() const
+    {
+        if (basicType == EbtSampler || basicType == EbtAtomicUint)
+            return true;
+        if (! structure)
+            return false;
+        for (unsigned int i = 0; i < structure->size(); ++i) {
+            if ((*structure)[i].type->containsOpaque())
                 return true;
         }
         return false;
@@ -1143,23 +1189,31 @@ public:
     {
         // For when we may already be sharing existing array descriptors,
         // keeping the pointers the same, just updating the contents.
+        assert(arraySizes != nullptr);
+        assert(type.arraySizes != nullptr);
         *arraySizes = *type.arraySizes;
     }
-    void setArraySizes(TArraySizes* s)
+    void newArraySizes(const TArraySizes& s)
     {
         // For setting a fresh new set of array sizes, not yet worrying about sharing.
         arraySizes = new TArraySizes;
-        *arraySizes = *s;
+        *arraySizes = s;
     }
-    void setArraySizes(const TType& type) { setArraySizes(type.arraySizes); }
-    void changeArraySize(int s) { arraySizes->sizes.front() = s; }
-    void setImplicitArraySize (int s) { arraySizes->implicitArraySize = s; }
+    void addArrayOuterSizes(const TArraySizes& s)
+    {
+        if (arraySizes == nullptr)
+            newArraySizes(s);
+        else
+            arraySizes->addOuterSizes(s);
+    }
+    void changeOuterArraySize(int s) { arraySizes->changeOuterSize(s); }
+    void setImplicitArraySize (int s) { arraySizes->setImplicitSize(s); }
 
     // Recursively make the implicit array size the explicit array size, through the type tree.
     void adoptImplicitArraySizes()
     {
         if (isImplicitlySizedArray())
-            changeArraySize(getImplicitArraySize());
+            changeOuterArraySize(getImplicitArraySize());
         if (isStruct()) {
             for (int i = 0; i < (int)structure->size(); ++i)
                 (*structure)[i].type->adoptImplicitArraySizes();
@@ -1170,7 +1224,7 @@ public:
     {
         return TType::getBasicString(basicType);
     }
-    
+
     static const char* getBasicString(TBasicType t)
     {
         switch (t) {
@@ -1259,13 +1313,15 @@ public:
             p += snprintf(p, end - p, "readonly ");
         if (qualifier.writeonly)
             p += snprintf(p, end - p, "writeonly ");
-        if (qualifier.storage != EvqTemporary && qualifier.storage != EvqGlobal)
-            p += snprintf(p, end - p, "%s ", getStorageQualifierString());
+        p += snprintf(p, end - p, "%s ", getStorageQualifierString());
         if (arraySizes) {
-            if (arraySizes->sizes.front() == 0)
-                p += snprintf(p, end - p, "implicitly-sized array of ");
-            else
-                p += snprintf(p, end - p, "%d-element array of ", arraySizes->sizes.front());
+            for(int i = 0; i < (int)arraySizes->getNumDims(); ++i) {
+                int size = arraySizes->getDimSize(i);
+                if (size == 0)
+                    p += snprintf(p, end - p, "implicitly-sized array of ");
+                else
+                    p += snprintf(p, end - p, "%d-element array of ", arraySizes->getDimSize(i));
+            }
         }
         if (qualifier.precision != EpqNone)
             p += snprintf(p, end - p, "%s ", getPrecisionQualifierString());
@@ -1277,6 +1333,11 @@ public:
         *p = 0;
         TString s(buf);
         s.append(getBasicTypeString());
+
+        if (qualifier.builtIn != EbvNone) {
+            s.append(" ");
+            s.append(getBuiltInVariableString());
+        }
 
         // Add struct/block members
         if (structure) {
@@ -1305,6 +1366,7 @@ public:
     }
 
     const char* getStorageQualifierString() const { return GetStorageQualifierString(qualifier.storage); }
+    const char* getBuiltInVariableString() const { return GetBuiltInVariableString(qualifier.builtIn); }
     const char* getPrecisionQualifierString() const { return GetPrecisionQualifierString(qualifier.precision); }
     const TTypeList* getStruct() const { return structure; }
     TTypeList* getWritableStruct() const { return structure; }  // This should only be used when known to not be sharing with other threads
@@ -1321,10 +1383,8 @@ public:
         else
             components = vectorSize;
 
-        if (isArray()) {
-            // this function can only be used in paths that have a known array size
-            assert(isExplicitlySizedArray());
-            components *= getArraySize();
+        if (arraySizes != nullptr) {
+            components *= arraySizes->getCumulativeSize();
         }
 
         return components;
@@ -1347,12 +1407,12 @@ public:
     //
     bool sameStructType(const TType& right) const
     {
-        // Most commonly, they are both 0, or the same pointer to the same actual structure
+        // Most commonly, they are both nullptr, or the same pointer to the same actual structure
         if (structure == right.structure)
             return true;
 
-        // Both being 0 was caught above, now they both have to be structures of the same number of elements
-        if (structure == 0 || right.structure == 0 ||
+        // Both being nullptr was caught above, now they both have to be structures of the same number of elements
+        if (structure == nullptr || right.structure == nullptr ||
             structure->size() != right.structure->size())
             return false;
 
@@ -1381,8 +1441,15 @@ public:
     // See if two type's arrayness match
     bool sameArrayness(const TType& right) const
     {
-        return ((arraySizes == 0 && right.arraySizes == 0) ||
-                (arraySizes && right.arraySizes && arraySizes->sizes == right.arraySizes->sizes));
+        return ((arraySizes == nullptr && right.arraySizes == nullptr) ||
+                (arraySizes != nullptr && right.arraySizes != nullptr && *arraySizes == *right.arraySizes));
+    }
+
+    // See if two type's arrayness match in everything except their outer dimension
+    bool sameInnerArrayness(const TType& right) const
+    {
+        assert(arraySizes != nullptr && right.arraySizes != nullptr);
+        return arraySizes->sameInnerArrayness(*right.arraySizes);
     }
 
     // See if two type's elements match in all ways except basic type
@@ -1420,8 +1487,8 @@ protected:
     TSampler sampler;
     TQualifier qualifier;
 
-    TArraySizes* arraySizes;    // 0 unless this is an array; can be shared across types
-    TTypeList* structure;       // 0 unless this is a struct; can be shared across types
+    TArraySizes* arraySizes;    // nullptr unless an array; can be shared across types
+    TTypeList* structure;       // nullptr unless this is a struct; can be shared across types
     TString *fieldName;         // for structure field names
     TString *typeName;          // for structure type name
 };

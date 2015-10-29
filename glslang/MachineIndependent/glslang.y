@@ -97,6 +97,13 @@ using namespace glslang;
 
 %{
 
+/* windows only pragma */
+#ifdef _MSC_VER
+    #pragma warning(disable : 4065)
+    #pragma warning(disable : 4127)
+    #pragma warning(disable : 4244)
+#endif
+
 #define parseContext (*pParseContext)
 #define yyerror(context, msg) context->parserError(msg)
 
@@ -155,7 +162,6 @@ extern int yylex(YYSTYPE*, TParseContext&);
 
 %token <lex> IDENTIFIER TYPE_NAME
 %token <lex> FLOATCONSTANT DOUBLECONSTANT INTCONSTANT UINTCONSTANT BOOLCONSTANT
-%token <lex> FIELD_SELECTION
 %token <lex> LEFT_OP RIGHT_OP
 %token <lex> INC_OP DEC_OP LE_OP GE_OP EQ_OP NE_OP
 %token <lex> AND_OP OR_OP XOR_OP MUL_ASSIGN DIV_ASSIGN ADD_ASSIGN
@@ -259,7 +265,7 @@ postfix_expression
     | function_call {
         $$ = $1;
     }
-    | postfix_expression DOT FIELD_SELECTION {
+    | postfix_expression DOT IDENTIFIER {
         $$ = parseContext.handleDotDereference($3.loc, $1, *$3.string);
     }
     | postfix_expression INC_OP {
@@ -684,7 +690,7 @@ declaration
 
         // lazy setting of the previous scope's defaults, has effect only the first time it is called in a particular scope
         parseContext.symbolTable.setPreviousDefaultPrecisions(&parseContext.defaultPrecision[0]);
-		parseContext.setDefaultPrecision($1.loc, $3, $2.qualifier.precision);
+        parseContext.setDefaultPrecision($1.loc, $3, $2.qualifier.precision);
         $$ = 0;
     }
     | block_structure SEMICOLON {
@@ -791,7 +797,7 @@ function_header
                                GetStorageQualifierString($1.qualifier.storage), "");
         }
         if ($1.arraySizes)
-            parseContext.arraySizeRequiredCheck($1.loc, $1.arraySizes->getSize());
+            parseContext.arraySizeRequiredCheck($1.loc, *$1.arraySizes);
 
         // Add the function as a prototype after parsing it (we do not support recursion)
         TFunction *function;
@@ -805,9 +811,9 @@ parameter_declarator
     // Type + name
     : type_specifier IDENTIFIER {
         if ($1.arraySizes) {
-            parseContext.profileRequires($1.loc, ENoProfile, 120, GL_3DL_array_objects, "arrayed type");
+            parseContext.profileRequires($1.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($1.loc, EEsProfile, 300, 0, "arrayed type");
-            parseContext.arraySizeRequiredCheck($1.loc, $1.arraySizes->getSize());
+            parseContext.arraySizeRequiredCheck($1.loc, *$1.arraySizes);
         }
         if ($1.basicType == EbtVoid) {
             parseContext.error($2.loc, "illegal use of type 'void'", $2.string->c_str(), "");
@@ -820,13 +826,13 @@ parameter_declarator
     }
     | type_specifier IDENTIFIER array_specifier {
         if ($1.arraySizes) {
-            parseContext.profileRequires($1.loc, ENoProfile, 120, GL_3DL_array_objects, "arrayed type");
+            parseContext.profileRequires($1.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($1.loc, EEsProfile, 300, 0, "arrayed type");
-            parseContext.arraySizeRequiredCheck($1.loc, $1.arraySizes->getSize());
+            parseContext.arraySizeRequiredCheck($1.loc, *$1.arraySizes);
         }
         parseContext.arrayDimCheck($2.loc, $1.arraySizes, $3.arraySizes);
 
-        parseContext.arraySizeRequiredCheck($3.loc, $3.arraySizes->getSize());
+        parseContext.arraySizeRequiredCheck($3.loc, *$3.arraySizes);
         parseContext.reservedErrorCheck($2.loc, *$2.string);
 
         $1.arraySizes = $3.arraySizes;
@@ -886,7 +892,7 @@ parameter_type_specifier
         TParameter param = { 0, new TType($1) };
         $$.param = param;
         if ($1.arraySizes)
-            parseContext.arraySizeRequiredCheck($1.loc, $1.arraySizes->getSize());
+            parseContext.arraySizeRequiredCheck($1.loc, *$1.arraySizes);
     }
     ;
 
@@ -949,7 +955,7 @@ fully_specified_type
 
         parseContext.globalQualifierTypeCheck($1.loc, $1.qualifier, $$);
         if ($1.arraySizes) {
-            parseContext.profileRequires($1.loc, ENoProfile, 120, GL_3DL_array_objects, "arrayed type");
+            parseContext.profileRequires($1.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($1.loc, EEsProfile, 300, 0, "arrayed type");
         }
 
@@ -960,7 +966,7 @@ fully_specified_type
         parseContext.globalQualifierTypeCheck($1.loc, $1.qualifier, $2);
 
         if ($2.arraySizes) {
-            parseContext.profileRequires($2.loc, ENoProfile, 120, GL_3DL_array_objects, "arrayed type");
+            parseContext.profileRequires($2.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($2.loc, EEsProfile, 300, 0, "arrayed type");
         }
 
@@ -1027,7 +1033,7 @@ layout_qualifier_id_list
     | layout_qualifier_id_list COMMA layout_qualifier_id {
         $$ = $1;
         $$.shaderQualifiers.merge($3.shaderQualifiers);
-        parseContext.mergeObjectLayoutQualifiers($2.loc, $$.qualifier, $3.qualifier, false);
+        parseContext.mergeObjectLayoutQualifiers($$.qualifier, $3.qualifier, false);
     }
 
 layout_qualifier_id
@@ -1233,7 +1239,7 @@ array_specifier
     : LEFT_BRACKET RIGHT_BRACKET {
         $$.loc = $1.loc;
         $$.arraySizes = new TArraySizes;
-        $$.arraySizes->setSize(0);
+        $$.arraySizes->addInnerSize();
     }
     | LEFT_BRACKET constant_expression RIGHT_BRACKET {
         $$.loc = $1.loc;
@@ -1241,18 +1247,18 @@ array_specifier
 
         int size;
         parseContext.arraySizeCheck($2->getLoc(), $2, size);
-        $$.arraySizes->setSize(size);
+        $$.arraySizes->addInnerSize(size);
     }
     | array_specifier LEFT_BRACKET RIGHT_BRACKET {
         $$ = $1;
-        $$.arraySizes->setSize(0);
+        $$.arraySizes->addInnerSize();
     }
     | array_specifier LEFT_BRACKET constant_expression RIGHT_BRACKET {
         $$ = $1;
 
         int size;
         parseContext.arraySizeCheck($3->getLoc(), $3, size);
-        $$.arraySizes->setSize(size);
+        $$.arraySizes->addInnerSize(size);
     }
     ;
 
@@ -1894,28 +1900,28 @@ type_specifier_nonarray
 precision_qualifier
     : HIGH_PRECISION {
         parseContext.profileRequires($1.loc, ENoProfile, 130, 0, "highp precision qualifier");
-        $$.init($1.loc);
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
         if (parseContext.profile == EEsProfile)
-		    $$.qualifier.precision = EpqHigh;
+            $$.qualifier.precision = EpqHigh;
     }
     | MEDIUM_PRECISION {
         parseContext.profileRequires($1.loc, ENoProfile, 130, 0, "mediump precision qualifier");
-        $$.init($1.loc);
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
         if (parseContext.profile == EEsProfile)
-	    	$$.qualifier.precision = EpqMedium;
+            $$.qualifier.precision = EpqMedium;
     }
     | LOW_PRECISION {
         parseContext.profileRequires($1.loc, ENoProfile, 130, 0, "lowp precision qualifier");
-        $$.init($1.loc);
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
         if (parseContext.profile == EEsProfile)
-    		$$.qualifier.precision = EpqLow;
+            $$.qualifier.precision = EpqLow;
     }
     ;
 
 struct_specifier
     : STRUCT IDENTIFIER LEFT_BRACE { parseContext.nestedStructCheck($1.loc); } struct_declaration_list RIGHT_BRACE {
         TType* structure = new TType($5, *$2.string);
-        parseContext.structArrayCheck($2.loc, structure);
+        parseContext.structArrayCheck($2.loc, *structure);
         TVariable* userTypeDef = new TVariable($2.string, *structure, true);
         if (! parseContext.symbolTable.insert(*userTypeDef))
             parseContext.error($2.loc, "redefinition", $2.string->c_str(), "struct");
@@ -1952,10 +1958,10 @@ struct_declaration_list
 struct_declaration
     : type_specifier struct_declarator_list SEMICOLON {
         if ($1.arraySizes) {
-            parseContext.profileRequires($1.loc, ENoProfile, 120, GL_3DL_array_objects, "arrayed type");
+            parseContext.profileRequires($1.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($1.loc, EEsProfile, 300, 0, "arrayed type");
             if (parseContext.profile == EEsProfile)
-                parseContext.arraySizeRequiredCheck($1.loc, $1.arraySizes->getSize());
+                parseContext.arraySizeRequiredCheck($1.loc, *$1.arraySizes);
         }
 
         $$ = $2;
@@ -1971,10 +1977,10 @@ struct_declaration
     | type_qualifier type_specifier struct_declarator_list SEMICOLON {
         parseContext.globalQualifierFixCheck($1.loc, $1.qualifier);
         if ($2.arraySizes) {
-            parseContext.profileRequires($2.loc, ENoProfile, 120, GL_3DL_array_objects, "arrayed type");
+            parseContext.profileRequires($2.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($2.loc, EEsProfile, 300, 0, "arrayed type");
             if (parseContext.profile == EEsProfile)
-                parseContext.arraySizeRequiredCheck($2.loc, $2.arraySizes->getSize());
+                parseContext.arraySizeRequiredCheck($2.loc, *$2.arraySizes);
         }
 
         $$ = $3;
@@ -2013,7 +2019,7 @@ struct_declarator
         $$.type = new TType(EbtVoid);
         $$.loc = $1.loc;
         $$.type->setFieldName(*$1.string);
-        $$.type->setArraySizes($2.arraySizes);
+        $$.type->newArraySizes(*$2.arraySizes);
     }
     ;
 
@@ -2024,13 +2030,13 @@ initializer
     | LEFT_BRACE initializer_list RIGHT_BRACE {
         const char* initFeature = "{ } style initializers";
         parseContext.requireProfile($1.loc, ~EEsProfile, initFeature);
-        parseContext.profileRequires($1.loc, ~EEsProfile, 420, GL_ARB_shading_language_420pack, initFeature);
+        parseContext.profileRequires($1.loc, ~EEsProfile, 420, E_GL_ARB_shading_language_420pack, initFeature);
         $$ = $2;
     }
     | LEFT_BRACE initializer_list COMMA RIGHT_BRACE {
         const char* initFeature = "{ } style initializers";
         parseContext.requireProfile($1.loc, ~EEsProfile, initFeature);
-        parseContext.profileRequires($1.loc, ~EEsProfile, 420, GL_ARB_shading_language_420pack, initFeature);
+        parseContext.profileRequires($1.loc, ~EEsProfile, 420, E_GL_ARB_shading_language_420pack, initFeature);
         $$ = $2;
     }
     ;
@@ -2347,7 +2353,7 @@ jump_statement
                 $$ = parseContext.intermediate.addBranch(EOpReturn, $2, $1.loc);
             }
         } else
-		    $$ = parseContext.intermediate.addBranch(EOpReturn, $2, $1.loc);
+            $$ = parseContext.intermediate.addBranch(EOpReturn, $2, $1.loc);
     }
     | DISCARD SEMICOLON {
         parseContext.requireStage($1.loc, EShLangFragment, "discard");

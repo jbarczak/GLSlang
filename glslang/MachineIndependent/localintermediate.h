@@ -127,7 +127,7 @@ public:
     explicit TIntermediate(EShLanguage l, int v = 0, EProfile p = ENoProfile) : language(l), treeRoot(0), profile(p), version(v), 
         numMains(0), numErrors(0), recursive(false),
         invocations(0), vertices(0), inputPrimitive(ElgNone), outputPrimitive(ElgNone), pixelCenterInteger(false), originUpperLeft(false),
-        vertexSpacing(EvsNone), vertexOrder(EvoNone), pointMode(false), earlyFragmentTests(false), depthLayout(EldNone), xfbMode(false)
+        vertexSpacing(EvsNone), vertexOrder(EvoNone), pointMode(false), earlyFragmentTests(false), depthLayout(EldNone), depthReplacing(false), blendEquations(0), xfbMode(false)
     {
         localSize[0] = 1;
         localSize[1] = 1;
@@ -155,42 +155,45 @@ public:
     int getNumErrors() const { return numErrors; }
     bool isRecursive() const { return recursive; }
     
-    TIntermSymbol* addSymbol(int Id, const TString&, const TType&, TSourceLoc);
-    TIntermSymbol* addSymbol(const TVariable&, TSourceLoc);
+    TIntermSymbol* addSymbol(int Id, const TString&, const TType&, const TSourceLoc&);
+    TIntermSymbol* addSymbol(const TVariable&, const TSourceLoc&);
     TIntermTyped* addConversion(TOperator, const TType&, TIntermTyped*) const;
     TIntermTyped* addBinaryMath(TOperator, TIntermTyped* left, TIntermTyped* right, TSourceLoc);
     TIntermTyped* addAssign(TOperator op, TIntermTyped* left, TIntermTyped* right, TSourceLoc);
     TIntermTyped* addIndex(TOperator op, TIntermTyped* base, TIntermTyped* index, TSourceLoc);
     TIntermTyped* addUnaryMath(TOperator, TIntermTyped* child, TSourceLoc);
-    TIntermTyped* addBuiltInFunctionCall(TSourceLoc line, TOperator, bool unary, TIntermNode*, const TType& returnType);
+    TIntermTyped* addBuiltInFunctionCall(const TSourceLoc& line, TOperator, bool unary, TIntermNode*, const TType& returnType);
     bool canImplicitlyPromote(TBasicType from, TBasicType to) const;
     TIntermAggregate* growAggregate(TIntermNode* left, TIntermNode* right);
-    TIntermAggregate* growAggregate(TIntermNode* left, TIntermNode* right, TSourceLoc);
+    TIntermAggregate* growAggregate(TIntermNode* left, TIntermNode* right, const TSourceLoc&);
     TIntermAggregate* makeAggregate(TIntermNode* node);
-    TIntermAggregate* makeAggregate(TIntermNode* node, TSourceLoc);
+    TIntermAggregate* makeAggregate(TIntermNode* node, const TSourceLoc&);
     TIntermTyped* setAggregateOperator(TIntermNode*, TOperator, const TType& type, TSourceLoc);
     bool areAllChildConst(TIntermAggregate* aggrNode);
-    TIntermNode*  addSelection(TIntermTyped* cond, TIntermNodePair code, TSourceLoc);
-    TIntermTyped* addSelection(TIntermTyped* cond, TIntermTyped* trueBlock, TIntermTyped* falseBlock, TSourceLoc);
-    TIntermTyped* addComma(TIntermTyped* left, TIntermTyped* right, TSourceLoc);
-    TIntermTyped* addMethod(TIntermTyped*, const TType&, const TString*, TSourceLoc);
-    TIntermConstantUnion* addConstantUnion(const TConstUnionArray&, const TType&, TSourceLoc, bool literal = false) const;
-    TIntermConstantUnion* addConstantUnion(int, TSourceLoc, bool literal = false) const;
-    TIntermConstantUnion* addConstantUnion(unsigned int, TSourceLoc, bool literal = false) const;
-    TIntermConstantUnion* addConstantUnion(bool, TSourceLoc, bool literal = false) const;
-    TIntermConstantUnion* addConstantUnion(double, TBasicType, TSourceLoc, bool literal = false) const;
+    TIntermNode*  addSelection(TIntermTyped* cond, TIntermNodePair code, const TSourceLoc&);
+    TIntermTyped* addSelection(TIntermTyped* cond, TIntermTyped* trueBlock, TIntermTyped* falseBlock, const TSourceLoc&);
+    TIntermTyped* addComma(TIntermTyped* left, TIntermTyped* right, const TSourceLoc&);
+    TIntermTyped* addMethod(TIntermTyped*, const TType&, const TString*, const TSourceLoc&);
+    TIntermConstantUnion* addConstantUnion(const TConstUnionArray&, const TType&, const TSourceLoc&, bool literal = false) const;
+    TIntermConstantUnion* addConstantUnion(int, const TSourceLoc&, bool literal = false) const;
+    TIntermConstantUnion* addConstantUnion(unsigned int, const TSourceLoc&, bool literal = false) const;
+    TIntermConstantUnion* addConstantUnion(bool, const TSourceLoc&, bool literal = false) const;
+    TIntermConstantUnion* addConstantUnion(double, TBasicType, const TSourceLoc&, bool literal = false) const;
     TIntermTyped* promoteConstantUnion(TBasicType, TIntermConstantUnion*) const;
     bool parseConstTree(TIntermNode*, TConstUnionArray, TOperator, const TType&, bool singleConstantParam = false);
-    TIntermLoop* addLoop(TIntermNode*, TIntermTyped*, TIntermTyped*, bool testFirst, TSourceLoc);
-    TIntermBranch* addBranch(TOperator, TSourceLoc);
-    TIntermBranch* addBranch(TOperator, TIntermTyped*, TSourceLoc);
-    TIntermTyped* addSwizzle(TVectorFields&, TSourceLoc);
+    TIntermLoop* addLoop(TIntermNode*, TIntermTyped*, TIntermTyped*, bool testFirst, const TSourceLoc&);
+    TIntermBranch* addBranch(TOperator, const TSourceLoc&);
+    TIntermBranch* addBranch(TOperator, TIntermTyped*, const TSourceLoc&);
+    TIntermTyped* addSwizzle(TVectorFields&, const TSourceLoc&);
 
     // Constant folding (in Constant.cpp)
     TIntermTyped* fold(TIntermAggregate* aggrNode);
     TIntermTyped* foldConstructor(TIntermAggregate* aggrNode);
-    TIntermTyped* foldDereference(TIntermTyped* node, int index, TSourceLoc);
-    TIntermTyped* foldSwizzle(TIntermTyped* node, TVectorFields& fields, TSourceLoc);
+    TIntermTyped* foldDereference(TIntermTyped* node, int index, const TSourceLoc&);
+    TIntermTyped* foldSwizzle(TIntermTyped* node, TVectorFields& fields, const TSourceLoc&);
+
+    // Tree ops
+    static const TIntermTyped* findLValueBase(const TIntermTyped*, bool swizzleOkay);
 
     // Linkage related
     void addSymbolLinkageNodes(TIntermAggregate*& linkage, EShLanguage, TSymbolTable&);
@@ -273,6 +276,11 @@ public:
         return true;
     }
     TLayoutDepth getDepth() const { return depthLayout; }
+    void setDepthReplacing() { depthReplacing = true; }
+    bool isDepthReplacing() const { return depthReplacing; }
+
+    void addBlendEquation(TBlendEquationShift b) { blendEquations |= (1 << b); }
+    unsigned int getBlendEquations() const { return blendEquations; }
 
     void addToCallGraph(TInfoSink&, const TString& caller, const TString& callee);
     void merge(TInfoSink&, TIntermediate&);
@@ -285,7 +293,7 @@ public:
     int addUsedOffsets(int binding, int offset, int numOffsets);
     int computeTypeLocationSize(const TType&) const;
 
-    bool setXfbBufferStride(int buffer, int stride)
+    bool setXfbBufferStride(int buffer, unsigned stride)
     {
         if (xfbBuffers[buffer].stride != TQualifier::layoutXfbStrideEnd)
             return xfbBuffers[buffer].stride == stride;
@@ -294,7 +302,7 @@ public:
     }
     int addXfbBufferOffset(const TType&);
     unsigned int computeTypeXfbSize(const TType&, bool& containsDouble) const;
-    int getBaseAlignment(const TType&, int& size, bool std140) const;
+    static int getBaseAlignment(const TType&, int& size, bool std140);
 
 protected:
     void error(TInfoSink& infoSink, const char*);
@@ -306,7 +314,7 @@ protected:
     void inOutLocationCheck(TInfoSink&);
     TIntermSequence& findLinkerObjects() const;
     bool userOutputUsed() const;
-    int getBaseAlignmentScalar(const TType&, int& size) const;
+    static int getBaseAlignmentScalar(const TType&, int& size);
 
     const EShLanguage language;
     TIntermNode* treeRoot;
@@ -329,6 +337,8 @@ protected:
     int localSize[3];
     bool earlyFragmentTests;
     TLayoutDepth depthLayout;
+    bool depthReplacing;
+    int blendEquations;        // an 'or'ing of masks of shifts of TBlendEquationShift
     bool xfbMode;
 
     typedef std::list<TCall> TGraph;

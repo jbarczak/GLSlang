@@ -1,5 +1,5 @@
 //
-//Copyright (C) 2014 LunarG, Inc.
+//Copyright (C) 2014-2015 LunarG, Inc.
 //
 //All rights reserved.
 //
@@ -37,17 +37,16 @@
 //
 
 //
-// Return English versions of instruction/operand information.
-// This can be used for disassembly, printing documentation, etc.
+// Parameterize the SPIR-V enumerants.
 //
 
-#include "spirv.h"
+#include "spirv.hpp"
 
 #include <vector>
 
 namespace spv {
 
-// Fill in all the parameters of the instruction set
+// Fill in all the parameters
 void Parameterize();
 
 // Return the English names of all the enums.
@@ -65,6 +64,10 @@ const char* LoopControlString(int);
 const char* FunctionControlString(int);
 const char* SamplerAddressingModeString(int);
 const char* SamplerFilterModeString(int);
+const char* ImageFormatString(int);
+const char* ImageChannelOrderString(int);
+const char* ImageChannelTypeString(int);
+const char* ImageOperands(int);
 const char* FPFastMathString(int);
 const char* FPRoundingModeString(int);
 const char* LinkageTypeString(int);
@@ -76,14 +79,49 @@ const char* ExecutionScopeString(int);
 const char* GroupOperationString(int);
 const char* KernelEnqueueFlagsString(int);
 const char* KernelProfilingInfoString(int);
+const char* CapabilityString(int);
+const char* OpcodeString(int);
+
+// For grouping opcodes into subsections
+enum OpcodeClass {
+    OpClassMisc,
+    OpClassDebug,
+    OpClassAnnotate,
+    OpClassExtension,
+    OpClassMode,
+    OpClassType,
+    OpClassConstant,
+    OpClassMemory,
+    OpClassFunction,
+    OpClassImage,
+    OpClassConvert,
+    OpClassComposite,
+    OpClassArithmetic,
+    OpClassBit,
+    OpClassRelationalLogical,
+    OpClassDerivative,
+    OpClassFlowControl,
+    OpClassAtomic,
+    OpClassPrimitive,
+    OpClassBarrier,
+    OpClassGroup,
+    OpClassDeviceSideEnqueue,
+    OpClassPipe,
+
+    OpClassCount,
+    OpClassMissing             // all instructions start out as missing
+};
 
 // For parameterizing operands.
 enum OperandClass {
     OperandNone,
     OperandId,
     OperandOptionalId,
+    OperandOptionalImage,
     OperandVariableIds,
+    OperandOptionalLiteral,
     OperandVariableLiterals,
+    OperandVariableIdLiteral,
     OperandVariableLiteralId,
     OperandLiteralNumber,
     OperandLiteralString,
@@ -96,38 +134,80 @@ enum OperandClass {
     OperandDimensionality,
     OperandSamplerAddressingMode,
     OperandSamplerFilterMode,
+    OperandSamplerImageFormat,
+    OperandImageChannelOrder,
+    OperandImageChannelDataType,
+    OperandImageOperands,
     OperandFPFastMath,
     OperandFPRoundingMode,
     OperandLinkageType,
+    OperandAccessQualifier,
     OperandFuncParamAttr,
     OperandDecoration,
     OperandBuiltIn,
     OperandSelect,
     OperandLoop,
     OperandFunction,
-    OperandAccessQualifier,
     OperandMemorySemantics,
     OperandMemoryAccess,
-    OperandExecutionScope,
+    OperandScope,
 	OperandGroupOperation,
     OperandKernelEnqueueFlags,
     OperandKernelProfilingInfo,
+    OperandCapability,
+
+    OperandOpcode,
+
     OperandCount
 };
+
+// Any specific enum can have a set of capabilities that allow it:
+typedef std::vector<Capability> EnumCaps;
 
 // Parameterize a set of operands with their OperandClass(es) and descriptions.
 class OperandParameters {
 public:
     OperandParameters() { }
-    void push(OperandClass oc)
+    void push(OperandClass oc, const char* d)
     {
         opClass.push_back(oc);
+        desc.push_back(d);
     }
     OperandClass getClass(int op) const { return opClass[op]; }
+    const char* getDesc(int op) const { return desc[op]; }
     int getNum() const { return (int)opClass.size(); }
 
 protected:
     std::vector<OperandClass> opClass;
+    std::vector<const char*> desc;
+};
+
+// Parameterize an enumerant
+class EnumParameters {
+public:
+    EnumParameters() : desc(0) { }
+    EnumCaps caps;
+    const char* desc;
+};
+
+// Parameterize a set of enumerants that form an enum
+class EnumDefinition : public EnumParameters {
+public:
+    EnumDefinition() : 
+        ceiling(0), bitmask(false), getName(0), enumParams(0), operandParams(0) { }
+    void set(int ceil, const char* (*name)(int), EnumParameters* ep, bool mask = false)
+    {
+        ceiling = ceil;
+        getName = name;
+        bitmask = mask;
+        enumParams = ep;
+    }
+    void setOperands(OperandParameters* op) { operandParams = op; }
+    int ceiling;   // ceiling of enumerants
+    bool bitmask;  // true if these enumerants combine into a bitmask
+    const char* (*getName)(int);      // a function that returns the name for each enumerant value (or shift)
+    EnumParameters* enumParams;       // parameters for each individual enumerant
+    OperandParameters* operandParams; // sets of operands
 };
 
 // Parameterize an instruction's logical format, including its known set of operands,
@@ -135,9 +215,10 @@ protected:
 class InstructionParameters {
 public:
     InstructionParameters() :
+        opDesc("TBD"),
+        opClass(OpClassMissing),
         typePresent(true),         // most normal, only exceptions have to be spelled out
-        resultPresent(true),       // most normal, only exceptions have to be spelled out
-        opName(0)
+        resultPresent(true)        // most normal, only exceptions have to be spelled out
     { }
 
     void setResultAndType(bool r, bool t)
@@ -149,7 +230,9 @@ public:
     bool hasResult() const { return resultPresent != 0; }
     bool hasType()   const { return typePresent != 0; }
 
-    const char* opName;
+    const char* opDesc;
+    EnumCaps capabilities;
+    OpcodeClass opClass;
     OperandParameters operands;
 
 protected:
@@ -157,8 +240,19 @@ protected:
     int resultPresent : 1;
 };
 
+const int OpcodeCeiling = 305;
+
 // The set of objects that hold all the instruction/operand
 // parameterization information.
-extern InstructionParameters InstructionDesc[spv::OpCount];
+extern InstructionParameters InstructionDesc[];
+
+// These hold definitions of the enumerants used for operands
+extern EnumDefinition OperandClassParams[];
+
+const char* GetOperandDesc(OperandClass operand);
+void PrintImmediateRow(int imm, const char* name, const EnumParameters* enumParams, bool caps, bool hex = false);
+const char* AccessQualifierString(int attr);
+
+void PrintOperands(const OperandParameters& operands, int reservedOperands);
 
 };  // end namespace spv

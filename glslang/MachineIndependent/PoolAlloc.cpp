@@ -183,13 +183,17 @@ const unsigned char TAllocation::userDataFill       = 0xcd;
 //
 // Check a single guard block for damage
 //
+#ifdef GUARD_BLOCKS
 void TAllocation::checkGuardBlock(unsigned char* blockMem, unsigned char val, const char* locText) const
+#else
+void TAllocation::checkGuardBlock(unsigned char*, unsigned char, const char*) const
+#endif
 {
 #ifdef GUARD_BLOCKS
     for (int x = 0; x < guardBlockSize; x++) {
         if (blockMem[x] != val) {
-			const int maxSize = 80;
-            char assertMsg[80];
+            const int maxSize = 80;
+            char assertMsg[maxSize];
 
             // We don't print the assert message.  It's here just to be helpful.
             snprintf(assertMsg, maxSize, "PoolAlloc: Damage %s %zu byte allocation at 0x%p\n",

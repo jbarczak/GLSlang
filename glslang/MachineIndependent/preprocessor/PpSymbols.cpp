@@ -100,7 +100,7 @@ TPpContext::Symbol* TPpContext::NewSymbol(int atom)
 {
     Symbol* lSymb;
     char* pch;
-    int ii;
+    size_t ii;
 
     lSymb = (Symbol *) mem_Alloc(pool, sizeof(Symbol));
     lSymb->atom = atom;
@@ -127,7 +127,7 @@ TPpContext::Symbol* TPpContext::LookUpSymbol(int atom)
 {
     TSymbolMap::iterator it = symbols.find(atom);
     if (it == symbols.end())
-        return 0;
+        return nullptr;
     else
         return it->second;
 }

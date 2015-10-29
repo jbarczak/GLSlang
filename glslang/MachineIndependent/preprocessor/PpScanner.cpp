@@ -88,11 +88,11 @@ NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "PpContext.h"
 #include "PpTokens.h"
-#include "Scan.h"
+#include "../Scan.h"
 
 namespace glslang {
 
-int TPpContext::InitScanner(TPpContext *cpp)
+int TPpContext::InitScanner()
 {
     // Add various atoms needed by the CPP line scanner:
     if (!InitCPP())
@@ -116,30 +116,31 @@ int TPpContext::InitScanner(TPpContext *cpp)
 int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 {
     bool HasDecimalOrExponent = false;
-    int declen, exp, ExpSign;
+    int declen;
     int str_len;
     int isDouble = 0;
 
     declen = 0;
-    exp = 0;
 
     str_len=len;
     char* str = ppToken->name;
     if (ch == '.') {
         HasDecimalOrExponent = true;
-        str[len++]=ch;
+        str[len++] = (char)ch;
         ch = getChar();
         while (ch >= '0' && ch <= '9') {
-            if (len < TPpToken::maxTokenLength) {
+            if (len < MaxTokenLength) {
                 declen++;
                 if (len > 0 || ch != '0') {
-                    str[len] = ch;
-                    len++;str_len++;
+                    str[len] = (char)ch;
+                    len++;
+                    str_len++;
                 }
                 ch = getChar();
             } else {
-                parseContext.error(ppToken->loc, "float literal too long", "", "");
-                len = 1,str_len=1;
+                parseContext.ppError(ppToken->loc, "float literal too long", "", "");
+                len = 1;
+                str_len = 1;
             }
         }
     }
@@ -148,36 +149,34 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 
     if (ch == 'e' || ch == 'E') {
         HasDecimalOrExponent = true;
-        if (len >= TPpToken::maxTokenLength) {
-            parseContext.error(ppToken->loc, "float literal too long", "", "");
-            len = 1,str_len=1;
+        if (len >= MaxTokenLength) {
+            parseContext.ppError(ppToken->loc, "float literal too long", "", "");
+            len = 1;
+            str_len = 1;
         } else {
-            ExpSign = 1;
-            str[len++]=ch;
+            str[len++] = (char)ch;
             ch = getChar();
             if (ch == '+') {
-                str[len++]=ch;  
+                str[len++] = (char)ch;
                 ch = getChar();
             } else if (ch == '-') {
-                ExpSign = -1;
-                str[len++]=ch;
+                str[len++] = (char)ch;
                 ch = getChar();
             }
             if (ch >= '0' && ch <= '9') {
                 while (ch >= '0' && ch <= '9') {
-                    if (len < TPpToken::maxTokenLength) {
-                        exp = exp*10 + ch - '0';
-                        str[len++]=ch;
+                    if (len < MaxTokenLength) {
+                        str[len++] = (char)ch;
                         ch = getChar();
                     } else {
-                        parseContext.error(ppToken->loc, "float literal too long", "", "");
-                        len = 1,str_len=1;
+                        parseContext.ppError(ppToken->loc, "float literal too long", "", "");
+                        len = 1;
+                        str_len = 1;
                     }
                 }
             } else {
-                parseContext.error(ppToken->loc, "bad character in float exponent", "", "");
+                parseContext.ppError(ppToken->loc, "bad character in float exponent", "", "");
             }
-            exp *= ExpSign;
         }
     }
 
@@ -188,31 +187,31 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
         if (ch == 'l' || ch == 'L') {
             parseContext.doubleCheck(ppToken->loc, "double floating-point suffix");
             if (! HasDecimalOrExponent)
-                parseContext.error(ppToken->loc, "float literal needs a decimal point or exponent", "", "");
+                parseContext.ppError(ppToken->loc, "float literal needs a decimal point or exponent", "", "");
             int ch2 = getChar();
             if (ch2 != 'f' && ch2 != 'F') {
                 ungetChar();
                 ungetChar();
             } else {
-                if (len < TPpToken::maxTokenLength) {
-                    str[len++] = ch;
-                    str[len++] = ch2;
+                if (len < MaxTokenLength) {
+                    str[len++] = (char)ch;
+                    str[len++] = (char)ch2;
                     isDouble = 1;
                 } else {
-                    parseContext.error(ppToken->loc, "float literal too long", "", "");
+                    parseContext.ppError(ppToken->loc, "float literal too long", "", "");
                     len = 1,str_len=1;
                 }
             }
         } else if (ch == 'f' || ch == 'F') {
-            parseContext.profileRequires(ppToken->loc,  EEsProfile, 300, 0, "floating-point suffix");
-            if ((parseContext.messages & EShMsgRelaxedErrors) == 0)
-                parseContext.profileRequires(ppToken->loc, ~EEsProfile, 120, 0, "floating-point suffix");
+            parseContext.profileRequires(ppToken->loc,  EEsProfile, 300, nullptr, "floating-point suffix");
+            if (! parseContext.relaxedErrors())
+                parseContext.profileRequires(ppToken->loc, ~EEsProfile, 120, nullptr, "floating-point suffix");
             if (! HasDecimalOrExponent)
-                parseContext.error(ppToken->loc, "float literal needs a decimal point or exponent", "", "");
-            if (len < TPpToken::maxTokenLength)
-                str[len++] = ch;
+                parseContext.ppError(ppToken->loc, "float literal needs a decimal point or exponent", "", "");
+            if (len < MaxTokenLength)
+                str[len++] = (char)ch;
             else {
-                parseContext.error(ppToken->loc, "float literal too long", "", "");
+                parseContext.ppError(ppToken->loc, "float literal too long", "", "");
                 len = 1,str_len=1;
             }
         } else 
@@ -220,13 +219,13 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 
         str[len]='\0';
 
-        ppToken->dval = strtod(str, 0);
+        ppToken->dval = strtod(str, nullptr);
     }
 
     if (isDouble)
-        return CPP_DOUBLECONSTANT;
+        return PpAtomConstDouble;
     else
-        return CPP_FLOATCONSTANT;
+        return PpAtomConstFloat;
 }
 
 //
@@ -234,9 +233,11 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 //
 int TPpContext::tStringInput::scan(TPpToken* ppToken)
 {
-    char tokenText[TPpToken::maxTokenLength + 1];
+    char* tokenText = ppToken->name;
     int AlreadyComplained = 0;
-    int len, ch, ii;
+    int len = 0;
+    int ch = 0;
+    int ii = 0;
     unsigned ival = 0;
 
     ppToken->ival = 0;
@@ -252,10 +253,8 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         len = 0;
         switch (ch) {
         default:
-            return ch; // Single character token, including '#' and '\' (escaped newlines are handled at a lower level, so this is just a '\' token)
-
-        case EOF:
-            return endOfInput;
+            // Single character token, including EndOfInput, '#' and '\' (escaped newlines are handled at a lower level, so this is just a '\' token)
+            return ch;
 
         case 'A': case 'B': case 'C': case 'D': case 'E':
         case 'F': case 'G': case 'H': case 'I': case 'J':
@@ -270,20 +269,20 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case 'u': case 'v': case 'w': case 'x': case 'y':
         case 'z':
             do {
-                if (len < TPpToken::maxTokenLength) {
-                    tokenText[len++] = ch;
-                    ch = pp->getChar();					
+                if (len < MaxTokenLength) {
+                    tokenText[len++] = (char)ch;
+                    ch = pp->getChar();
                 } else {
                     if (! AlreadyComplained) {
-                        pp->parseContext.error(ppToken->loc, "name too long", "", "");
+                        pp->parseContext.ppError(ppToken->loc, "name too long", "", "");
                         AlreadyComplained = 1;
                     }
                     ch = pp->getChar();
                 }
             } while ((ch >= 'a' && ch <= 'z') ||
-                (ch >= 'A' && ch <= 'Z') ||
-                (ch >= '0' && ch <= '9') ||
-                ch == '_');
+                     (ch >= 'A' && ch <= 'Z') ||
+                     (ch >= '0' && ch <= '9') ||
+                     ch == '_');
 
             // line continuation with no token before or after makes len == 0, and need to start over skipping white space, etc.
             if (len == 0)
@@ -292,16 +291,15 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
             tokenText[len] = '\0';
             pp->ungetChar();
             ppToken->atom = pp->LookUpAddString(tokenText);
-
-            return CPP_IDENTIFIER;
+            return PpAtomIdentifier;
         case '0':
-            ppToken->name[len++] = ch;
+            ppToken->name[len++] = (char)ch;
             ch = pp->getChar();
             if (ch == 'x' || ch == 'X') {
                 // must be hexidecimal
 
                 bool isUnsigned = false;
-                ppToken->name[len++] = ch;
+                ppToken->name[len++] = (char)ch;
                 ch = pp->getChar();
                 if ((ch >= '0' && ch <= '9') ||
                     (ch >= 'A' && ch <= 'F') ||
@@ -310,7 +308,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                     ival = 0;
                     do {
                         if (ival <= 0x0fffffff) {
-                            ppToken->name[len++] = ch;
+                            ppToken->name[len++] = (char)ch;
                             if (ch >= '0' && ch <= '9') {
                                 ii = ch - '0';
                             } else if (ch >= 'A' && ch <= 'F') {
@@ -318,25 +316,25 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                             } else if (ch >= 'a' && ch <= 'f') {
                                 ii = ch - 'a' + 10;
                             } else
-                                pp->parseContext.error(ppToken->loc, "bad digit in hexidecimal literal", "", "");
+                                pp->parseContext.ppError(ppToken->loc, "bad digit in hexidecimal literal", "", "");
                             ival = (ival << 4) | ii;
                         } else {
                             if (! AlreadyComplained) {
-                                pp->parseContext.error(ppToken->loc, "hexidecimal literal too big", "", "");
+                                pp->parseContext.ppError(ppToken->loc, "hexidecimal literal too big", "", "");
                                 AlreadyComplained = 1;
                             }
                             ival = 0xffffffff;
                         }
                         ch = pp->getChar();
                     } while ((ch >= '0' && ch <= '9') ||
-                        (ch >= 'A' && ch <= 'F') ||
-                        (ch >= 'a' && ch <= 'f'));
+                             (ch >= 'A' && ch <= 'F') ||
+                             (ch >= 'a' && ch <= 'f'));
                 } else {
-                    pp->parseContext.error(ppToken->loc, "bad digit in hexidecimal literal", "", "");
+                    pp->parseContext.ppError(ppToken->loc, "bad digit in hexidecimal literal", "", "");
                 }
                 if (ch == 'u' || ch == 'U') {
-                    if (len < TPpToken::maxTokenLength)
-                        ppToken->name[len++] = ch;
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
                 } else
                     pp->ungetChar();
@@ -344,9 +342,9 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                 ppToken->ival = (int)ival;
 
                 if (isUnsigned)
-                    return CPP_UINTCONSTANT;
+                    return PpAtomConstUint;
                 else
-                    return CPP_INTCONSTANT;
+                    return PpAtomConstInt;
             } else {
                 // could be octal integer or floating point, speculative pursue octal until it must be floating point
 
@@ -357,10 +355,10 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
 
                 // see how much octal-like stuff we can read
                 while (ch >= '0' && ch <= '7') {
-                    if (len < TPpToken::maxTokenLength)
-                        ppToken->name[len++] = ch;
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
                     else if (! AlreadyComplained) {
-                        pp->parseContext.error(ppToken->loc, "numeric literal too long", "", "");
+                        pp->parseContext.ppError(ppToken->loc, "numeric literal too long", "", "");
                         AlreadyComplained = 1;
                     }
                     if (ival <= 0x1fffffff) {
@@ -375,10 +373,10 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                 if (ch == '8' || ch == '9') {
                     nonOctal = true;
                     do {
-                        if (len < TPpToken::maxTokenLength)
-                            ppToken->name[len++] = ch;
+                        if (len < MaxTokenLength)
+                            ppToken->name[len++] = (char)ch;
                         else if (! AlreadyComplained) {
-                            pp->parseContext.error(ppToken->loc, "numeric literal too long", "", "");
+                            pp->parseContext.ppError(ppToken->loc, "numeric literal too long", "", "");
                             AlreadyComplained = 1;
                         }
                         ch = pp->getChar();
@@ -389,25 +387,25 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                 
                 // wasn't a float, so must be octal...
                 if (nonOctal)
-                    pp->parseContext.error(ppToken->loc, "octal literal digit too large", "", "");
+                    pp->parseContext.ppError(ppToken->loc, "octal literal digit too large", "", "");
 
                 if (ch == 'u' || ch == 'U') {
-                    if (len < TPpToken::maxTokenLength)
-                        ppToken->name[len++] = ch;
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
                 } else
                     pp->ungetChar();
                 ppToken->name[len] = '\0';
 
                 if (octalOverflow)
-                    pp->parseContext.error(ppToken->loc, "octal literal too big", "", "");
+                    pp->parseContext.ppError(ppToken->loc, "octal literal too big", "", "");
 
                 ppToken->ival = (int)ival;
 
                 if (isUnsigned)
-                    return CPP_UINTCONSTANT;
+                    return PpAtomConstUint;
                 else
-                    return CPP_INTCONSTANT;
+                    return PpAtomConstInt;
             }
             break;
         case '1': case '2': case '3': case '4':
@@ -415,10 +413,10 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
             // can't be hexidecimal or octal, is either decimal or floating point
 
             do {
-                if (len < TPpToken::maxTokenLength)
-                    ppToken->name[len++] = ch;
+                if (len < MaxTokenLength)
+                    ppToken->name[len++] = (char)ch;
                 else if (! AlreadyComplained) {
-                    pp->parseContext.error(ppToken->loc, "numeric literal too long", "", "");
+                    pp->parseContext.ppError(ppToken->loc, "numeric literal too long", "", "");
                     AlreadyComplained = 1;
                 }
                 ch = pp->getChar();
@@ -428,21 +426,23 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
             } else {
                 // Finish handling signed and unsigned integers
                 int numericLen = len;
-                int uint = 0;
+                bool uint = false;
                 if (ch == 'u' || ch == 'U') {
-                    if (len < TPpToken::maxTokenLength)
-                        ppToken->name[len++] = ch;
-                    uint = 1;
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
+                    uint = true;
                 } else
                     pp->ungetChar();
 
-                ppToken->name[len] = '\0';				
+                ppToken->name[len] = '\0';
                 ival = 0;
-                for (ii = 0; ii < numericLen; ii++) {
-                    ch = ppToken->name[ii] - '0';
-                    if ((ival > 429496729) || (ival == 429496729 && ch >= 6)) {
-                        pp->parseContext.error(ppToken->loc, "numeric literal too big", "", "");
-                        ival = -1;
+                const unsigned oneTenthMaxInt  = 0xFFFFFFFFu / 10;
+                const unsigned remainderMaxInt = 0xFFFFFFFFu - 10 * oneTenthMaxInt;
+                for (int i = 0; i < numericLen; i++) {
+                    ch = ppToken->name[i] - '0';
+                    if ((ival > oneTenthMaxInt) || (ival == oneTenthMaxInt && (unsigned)ch > remainderMaxInt)) {
+                        pp->parseContext.ppError(ppToken->loc, "numeric literal too big", "", "");
+                        ival = 0xFFFFFFFFu;
                         break;
                     } else
                         ival = ival * 10 + ch;
@@ -450,17 +450,17 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                 ppToken->ival = (int)ival;
 
                 if (uint)
-                    return CPP_UINTCONSTANT;
+                    return PpAtomConstUint;
                 else
-                    return CPP_INTCONSTANT;
+                    return PpAtomConstInt;
             }
             break;
         case '-':
             ch = pp->getChar();
             if (ch == '-') {
-                return CPP_DEC_OP;
+                return PpAtomDecrement;
             } else if (ch == '=') {
-                return CPP_SUB_ASSIGN;
+                return PpAtomSub;
             } else {
                 pp->ungetChar();
                 return '-';
@@ -468,9 +468,9 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '+':
             ch = pp->getChar();
             if (ch == '+') {
-                return CPP_INC_OP;
+                return PpAtomIncrement;
             } else if (ch == '=') {
-                return CPP_ADD_ASSIGN;
+                return PpAtomAdd;
             } else {
                 pp->ungetChar();
                 return '+';
@@ -478,7 +478,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '*':
             ch = pp->getChar();
             if (ch == '=') {
-                return CPP_MUL_ASSIGN;
+                return PpAtomMul;
             } else {
                 pp->ungetChar();
                 return '*';
@@ -486,28 +486,18 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '%':
             ch = pp->getChar();
             if (ch == '=') {
-                return CPP_MOD_ASSIGN;
-            } else if (ch == '>'){
-                return CPP_RIGHT_BRACE;
+                return PpAtomMod;
             } else {
                 pp->ungetChar();
                 return '%';
             }
-        case ':':
-            ch = pp->getChar();
-            if (ch == '>') {
-                return CPP_RIGHT_BRACKET;
-            } else {
-                pp->ungetChar();
-                return ':';
-            }
         case '^':
             ch = pp->getChar();
             if (ch == '^') {
-                return CPP_XOR_OP;
+                return PpAtomXor;
             } else {
                 if (ch == '=')
-                    return CPP_XOR_ASSIGN;
+                    return PpAtomXorAssign;
                 else{
                     pp->ungetChar();
                     return '^';
@@ -517,7 +507,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '=':
             ch = pp->getChar();
             if (ch == '=') {
-                return CPP_EQ_OP;
+                return PpAtomEQ;
             } else {
                 pp->ungetChar();
                 return '=';
@@ -525,7 +515,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '!':
             ch = pp->getChar();
             if (ch == '=') {
-                return CPP_NE_OP;
+                return PpAtomNE;
             } else {
                 pp->ungetChar();
                 return '!';
@@ -533,68 +523,54 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case '|':
             ch = pp->getChar();
             if (ch == '|') {
-                return CPP_OR_OP;
+                return PpAtomOr;
+            } else if (ch == '=') {
+                return PpAtomOrAssign;
             } else {
-                if (ch == '=')
-                    return CPP_OR_ASSIGN;
-                else{
-                    pp->ungetChar();
-                    return '|';
-                }
+                pp->ungetChar();
+                return '|';
             }
         case '&':
             ch = pp->getChar();
             if (ch == '&') {
-                return CPP_AND_OP;
+                return PpAtomAnd;
+            } else if (ch == '=') {
+                return PpAtomAndAssign;
             } else {
-                if (ch == '=')
-                    return CPP_AND_ASSIGN;
-                else{
-                    pp->ungetChar();
-                    return '&';
-                }
+                pp->ungetChar();
+                return '&';
             }
         case '<':
             ch = pp->getChar();
             if (ch == '<') {
                 ch = pp->getChar();
                 if (ch == '=')
-                    return CPP_LEFT_ASSIGN;
-                else{
+                    return PpAtomLeftAssign;
+                else {
                     pp->ungetChar();
-                    return CPP_LEFT_OP;
+                    return PpAtomLeft;
                 }
+            } else if (ch == '=') {
+                return PpAtomLE;
             } else {
-                if (ch == '=') {
-                    return CPP_LE_OP;
-                } else {
-                    if (ch == '%')
-                        return CPP_LEFT_BRACE;
-                    else if (ch == ':')
-                        return CPP_LEFT_BRACKET;
-                    else{
-                        pp->ungetChar();
-                        return '<';
-                    }
-                }
+                pp->ungetChar();
+                return '<';
             }
         case '>':
             ch = pp->getChar();
             if (ch == '>') {
                 ch = pp->getChar();
                 if (ch == '=')
-                    return CPP_RIGHT_ASSIGN;
-                else{
+                    return PpAtomRightAssign;
+                else {
                     pp->ungetChar();
-                    return CPP_RIGHT_OP;
+                    return PpAtomRight;
                 }
+            } else if (ch == '=') {
+                return PpAtomGE;
             } else {
-                if (ch == '=') {
-                    return CPP_GE_OP;
-                } else {
-                    pp->ungetChar();
-                    return '>';
-                }
+                pp->ungetChar();
+                return '>';
             }
         case '.':
             ch = pp->getChar();
@@ -611,35 +587,32 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                 pp->inComment = true;
                 do {
                     ch = pp->getChar();
-                } while (ch != '\n' && ch != EOF);
+                } while (ch != '\n' && ch != EndOfInput);
                 ppToken->space = true;
                 pp->inComment = false;
-
-                if (ch == EOF)
-                    return endOfInput;
 
                 return ch;
             } else if (ch == '*') {
                 ch = pp->getChar();
                 do {
                     while (ch != '*') {
-                        if (ch == EOF) {
-                            pp->parseContext.error(ppToken->loc, "EOF in comment", "comment", "");
-                            return endOfInput;
+                        if (ch == EndOfInput) {
+                            pp->parseContext.ppError(ppToken->loc, "End of input in comment", "comment", "");
+                            return ch;
                         }
                         ch = pp->getChar();
                     }
                     ch = pp->getChar();
-                    if (ch == EOF) {
-                        pp->parseContext.error(ppToken->loc, "EOF in comment", "comment", "");
-                        return endOfInput;
+                    if (ch == EndOfInput) {
+                        pp->parseContext.ppError(ppToken->loc, "End of input in comment", "comment", "");
+                        return ch;
                     }
                 } while (ch != '/');
                 ppToken->space = true;
                 // loop again to get the next token...
                 break;
             } else if (ch == '=') {
-                return CPP_DIV_ASSIGN;
+                return PpAtomDiv;
             } else {
                 pp->ungetChar();
                 return '/';
@@ -647,22 +620,20 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
             break;
         case '"':
             ch = pp->getChar();
-            while (ch != '"' && ch != '\n' && ch != EOF) {
-                if (len < TPpToken::maxTokenLength) {
-                    tokenText[len] = ch;
+            while (ch != '"' && ch != '\n' && ch != EndOfInput) {
+                if (len < MaxTokenLength) {
+                    tokenText[len] = (char)ch;
                     len++;
                     ch = pp->getChar();
                 } else
                     break;
             };
             tokenText[len] = '\0';
-            if (ch == '"') {
-                ppToken->atom = pp->LookUpAddString(tokenText);
-                return CPP_STRCONSTANT;
-            } else {
-                pp->parseContext.error(ppToken->loc, "end of line in string", "string", "");
-                return CPP_ERROR_SY;
+            if (ch != '"') {
+                pp->ungetChar();
+                pp->parseContext.ppError(ppToken->loc, "End of line in string", "string", "");
             }
+            return PpAtomConstString;
         }
 
         ch = pp->getChar();
@@ -681,24 +652,23 @@ const char* TPpContext::tokenize(TPpToken* ppToken)
     int token = '\n';
 
     for(;;) {
-        const char* tokenString = 0;
         token = scanToken(ppToken);
         ppToken->token = token;
-        if (token == EOF) {
+        if (token == EndOfInput) {
             missingEndifCheck();
-            return 0;
+            return nullptr;
         }
         if (token == '#') {
             if (previous_token == '\n') {
                 token = readCPPline(ppToken);
-                if (token == EOF) {
+                if (token == EndOfInput) {
                     missingEndifCheck();
-                    return 0;
+                    return nullptr;
                 }
                 continue;
             } else {
-                parseContext.error(ppToken->loc, "preprocessor directive cannot be preceded by another token", "#", "");
-                return 0;
+                parseContext.ppError(ppToken->loc, "preprocessor directive cannot be preceded by another token", "#", "");
+                return nullptr;
             }
         }
         previous_token = token;
@@ -707,22 +677,28 @@ const char* TPpContext::tokenize(TPpToken* ppToken)
             continue;
 
         // expand macros
-        if (token == CPP_IDENTIFIER && MacroExpand(ppToken->atom, ppToken, false, true) != 0)
+        if (token == PpAtomIdentifier && MacroExpand(ppToken->atom, ppToken, false, true) != 0)
             continue;
 
-        if (token == CPP_IDENTIFIER)
-            tokenString = GetAtomString(ppToken->atom);
-        else if (token == CPP_INTCONSTANT || token == CPP_UINTCONSTANT ||
-                 token == CPP_FLOATCONSTANT || token == CPP_DOUBLECONSTANT)
+        const char* tokenString = nullptr;
+        switch (token) {
+        case PpAtomIdentifier:
+        case PpAtomConstInt:
+        case PpAtomConstUint:
+        case PpAtomConstFloat:
+        case PpAtomConstDouble:
             tokenString = ppToken->name;
-        else if (token == CPP_STRCONSTANT) {
-            parseContext.error(ppToken->loc, "string literals not supported", "\"\"", "");
-            tokenString = 0;
-        } else if (token == '\'') {
-            parseContext.error(ppToken->loc, "character literals not supported", "\'", "");
-            tokenString = 0;
-        } else
+            break;
+        case PpAtomConstString:
+            parseContext.ppError(ppToken->loc, "string literals not supported", "\"\"", "");
+            break;
+        case '\'':
+            parseContext.ppError(ppToken->loc, "character literals not supported", "\'", "");
+            break;
+        default:
             tokenString = GetAtomString(token);
+            break;
+        }
 
         if (tokenString) {
             if (tokenString[0] != 0)
@@ -737,7 +713,7 @@ const char* TPpContext::tokenize(TPpToken* ppToken)
 void TPpContext::missingEndifCheck()
 {
     if (ifdepth > 0)
-        parseContext.error(parseContext.getCurrentLoc(), "missing #endif", "", "");
+        parseContext.ppError(parseContext.getCurrentLoc(), "missing #endif", "", "");
 }
 
 } // end namespace glslang

@@ -88,6 +88,8 @@ void TIntermediate::merge(TInfoSink& infoSink, TIntermediate& unit)
     else if (depthLayout != unit.depthLayout)
         error(infoSink, "Contradictory depth layouts");
 
+    blendEquations |= unit.blendEquations;
+
     if (inputPrimitive == ElgNone)
         inputPrimitive = unit.inputPrimitive;
     else if (inputPrimitive != unit.inputPrimitive)
@@ -240,9 +242,7 @@ void TIntermediate::mergeLinkerObjects(TInfoSink& infoSink, TIntermSequence& lin
 void TIntermediate::mergeImplicitArraySizes(TType& type, const TType& unitType)
 {
     if (type.isImplicitlySizedArray() && unitType.isArray()) {
-        int newImplicitArraySize = unitType.getArraySize();
-        if (newImplicitArraySize == 0)
-            newImplicitArraySize = unitType.getImplicitArraySize();
+        int newImplicitArraySize = unitType.isImplicitlySizedArray() ? unitType.getImplicitArraySize() : unitType.getOuterArraySize();
         if (newImplicitArraySize > type.getImplicitArraySize ())
             type.setImplicitArraySize(newImplicitArraySize);
     }
@@ -432,6 +432,9 @@ void TIntermediate::finalCheck(TInfoSink& infoSink)
         break;
     case EShLangCompute:
         break;
+    default:
+        error(infoSink, "Unknown Stage.");
+        break;
     }
 
     // Process the tree for any node-specific work.
@@ -537,7 +540,6 @@ void TIntermediate::checkCallGraphCycles(TInfoSink& infoSink)
 void TIntermediate::inOutLocationCheck(TInfoSink& infoSink)
 {
     // ES 3.0 requires all outputs to have location qualifiers if there is more than one output
-    bool fragOutHasLocation = false;
     bool fragOutWithNoLocation = false;
     int numFragOut = 0;
 
@@ -548,11 +550,9 @@ void TIntermediate::inOutLocationCheck(TInfoSink& infoSink)
         const TType& type = linkObjects[i]->getAsTyped()->getType();
         const TQualifier& qualifier = type.getQualifier();
         if (language == EShLangFragment) {
-            if (qualifier.storage == EvqVaryingOut) {
+            if (qualifier.storage == EvqVaryingOut && qualifier.builtIn == EbvNone) {
                 ++numFragOut;
-                if (qualifier.hasAnyLocation())
-                    fragOutHasLocation = true;
-                else
+                if (!qualifier.hasAnyLocation())
                     fragOutWithNoLocation = true;
             }
         }
@@ -623,7 +623,7 @@ int TIntermediate::addUsedLocation(const TQualifier& qualifier, const TType& typ
     int size;
     if (qualifier.isUniformOrBuffer()) {
         if (type.isArray())
-            size = type.getArraySize();
+            size = type.getCumulativeArraySize();
         else
             size = 1;
     } else {
@@ -693,12 +693,13 @@ int TIntermediate::computeTypeLocationSize(const TType& type) const
     // "If the declared input is an array of size n and each element takes m locations, it will be assigned m * n 
     // consecutive locations..."
     if (type.isArray()) {
+        // TODO: perf: this can be flattened by using getCumulativeArraySize(), and a deref that discards all arrayness
         TType elementType(type, 0);
         if (type.isImplicitlySizedArray()) {
             // TODO: are there valid cases of having an implicitly-sized array with a location?  If so, running this code too early.
             return computeTypeLocationSize(elementType);
         } else
-            return type.getArraySize() * computeTypeLocationSize(elementType);
+            return type.getOuterArraySize() * computeTypeLocationSize(elementType);
     }
 
     // "The locations consumed by block and structure members are determined by applying the rules above 
@@ -712,7 +713,9 @@ int TIntermediate::computeTypeLocationSize(const TType& type) const
         return size;
     }
 
-    // "If a vertex shader input is any scalar or vector type, it will consume a single location. If a non-vertex 
+    // ES: "If a shader input is any scalar or vector type, it will consume a single location."
+
+    // Desktop: "If a vertex shader input is any scalar or vector type, it will consume a single location. If a non-vertex 
     // shader input is a scalar or vector type other than dvec3 or dvec4, it will consume a single location, while 
     // types dvec3 or dvec4 will consume two consecutive locations. Inputs of type double and dvec2 will 
     // consume only a single location, in all stages."
@@ -781,10 +784,11 @@ unsigned int TIntermediate::computeTypeXfbSize(const TType& type, bool& contains
     // that component's size.  Aggregate types are flattened down to the component
     // level to get this sequence of components."
 
-    if (type.isArray()) {
+    if (type.isArray()) {        
+        // TODO: perf: this can be flattened by using getCumulativeArraySize(), and a deref that discards all arrayness
         assert(type.isExplicitlySizedArray());
         TType elementType(type, 0);
-        return type.getArraySize() * computeTypeXfbSize(elementType, containsDouble);
+        return type.getOuterArraySize() * computeTypeXfbSize(elementType, containsDouble);
     }
 
     if (type.isStruct()) {
@@ -835,7 +839,7 @@ const int baseAlignmentVec4Std140 = 16;
 // Return the size and alignment of a scalar.
 // The size is returned in the 'size' parameter
 // Return value is the alignment of the type.
-int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size) const
+int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size)
 {
     switch (type.getBasicType()) {
     case EbtDouble:  size = 8; return 8;
@@ -851,7 +855,7 @@ int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size) const
 //
 // The size is returned in the 'size' parameter
 // Return value is the alignment of the type.
-int TIntermediate::getBaseAlignment(const TType& type, int& size, bool std140) const
+int TIntermediate::getBaseAlignment(const TType& type, int& size, bool std140)
 {
     int alignment;
 
@@ -911,12 +915,13 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, bool std140) c
 
     // rules 4, 6, and 8
     if (type.isArray()) {
+        // TODO: perf: this might be flattened by using getCumulativeArraySize(), and a deref that discards all arrayness
         TType derefType(type, 0);
         alignment = getBaseAlignment(derefType, size, std140);
         if (std140)
             alignment = std::max(baseAlignmentVec4Std140, alignment);
         RoundToPow2(size, alignment);
-        size *= type.getArraySize();
+        size *= type.getOuterArraySize();
         return alignment;
     }
 

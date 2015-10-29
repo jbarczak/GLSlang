@@ -140,7 +140,7 @@ enum TOperator {
     EOpMethod,
 
     //
-    // Built-in functions potentially mapped to operators
+    // Built-in functions mapped to operators
     //
 
     EOpRadians,
@@ -185,6 +185,11 @@ enum TOperator {
     EOpIsNan,
     EOpIsInf,
 
+    EOpFma,
+
+    EOpFrexp,
+    EOpLdexp,
+
     EOpFloatBitsToInt,
     EOpFloatBitsToUint,
     EOpIntBitsToFloat,
@@ -193,8 +198,14 @@ enum TOperator {
     EOpUnpackSnorm2x16,
     EOpPackUnorm2x16,
     EOpUnpackUnorm2x16,
+    EOpPackSnorm4x8,
+    EOpUnpackSnorm4x8,
+    EOpPackUnorm4x8,
+    EOpUnpackUnorm4x8,
     EOpPackHalf2x16,
     EOpUnpackHalf2x16,
+    EOpPackDouble2x32,
+    EOpUnpackDouble2x32,
 
     EOpLength,
     EOpDistance,
@@ -215,11 +226,17 @@ enum TOperator {
     EOpDPdyCoarse,      // Fragment only
     EOpFwidthCoarse,    // Fragment only
 
+    EOpInterpolateAtCentroid, // Fragment only
+    EOpInterpolateAtSample,   // Fragment only
+    EOpInterpolateAtOffset,   // Fragment only
+
     EOpMatrixTimesMatrix,
     EOpOuterProduct,
     EOpDeterminant,
     EOpMatrixInverse,
     EOpTranspose,
+
+    EOpFtransform,
 
     EOpEmitVertex,           // geometry only
     EOpEndPrimitive,         // geometry only
@@ -234,7 +251,7 @@ enum TOperator {
     EOpMemoryBarrierShared,  // compute only
     EOpGroupMemoryBarrier,   // compute only
 
-    EOpAtomicAdd,            // TODO: AST functionality: hook these up
+    EOpAtomicAdd,
     EOpAtomicMin,
     EOpAtomicMax,
     EOpAtomicAnd,
@@ -242,6 +259,10 @@ enum TOperator {
     EOpAtomicXor,
     EOpAtomicExchange,
     EOpAtomicCompSwap,
+
+    EOpAtomicCounterIncrement,
+    EOpAtomicCounterDecrement,
+    EOpAtomicCounter,
 
     EOpAny,
     EOpAll,
@@ -328,6 +349,72 @@ enum TOperator {
     //
 
     EOpArrayLength,      // "Array" distinguishes from length(v) built-in function, but it applies to vectors and matrices as well.
+
+    //
+    // Image operations
+    //
+
+    EOpImageGuardBegin,
+
+    EOpImageQuerySize,
+    EOpImageQuerySamples,
+    EOpImageLoad,
+    EOpImageStore,
+    EOpImageAtomicAdd,
+    EOpImageAtomicMin,
+    EOpImageAtomicMax,
+    EOpImageAtomicAnd,
+    EOpImageAtomicOr,
+    EOpImageAtomicXor,
+    EOpImageAtomicExchange,
+    EOpImageAtomicCompSwap,
+
+    EOpImageGuardEnd,
+
+    //
+    // Texture operations
+    //
+
+    EOpTextureGuardBegin,
+
+    EOpTextureQuerySize,
+    EOpTextureQueryLod,
+    EOpTextureQueryLevels,
+    EOpTextureQuerySamples,
+    EOpTexture,
+    EOpTextureProj,
+    EOpTextureLod,
+    EOpTextureOffset,
+    EOpTextureFetch,
+    EOpTextureFetchOffset,
+    EOpTextureProjOffset,
+    EOpTextureLodOffset,
+    EOpTextureProjLod,
+    EOpTextureProjLodOffset,
+    EOpTextureGrad,
+    EOpTextureGradOffset,
+    EOpTextureProjGrad,
+    EOpTextureProjGradOffset,
+    EOpTextureGather,
+    EOpTextureGatherOffset,
+    EOpTextureGatherOffsets,
+
+    EOpTextureGuardEnd,
+
+    //
+    // Integer operations
+    //
+
+    EOpAddCarry,
+    EOpSubBorrow,
+    EOpUMulExtended,
+    EOpIMulExtended,
+    EOpBitfieldExtract,
+    EOpBitfieldInsert,
+    EOpBitFieldReverse,
+    EOpBitCount,
+    EOpFindLSB,
+    EOpFindMSB,
 };
 
 class TIntermTraverser;
@@ -354,9 +441,9 @@ class TIntermNode {
 public:
     POOL_ALLOCATOR_NEW_DELETE(glslang::GetThreadPoolAllocator())
 
-    TIntermNode() { loc.line = 0; loc.string = 0; }
-    virtual glslang::TSourceLoc getLoc() const { return loc; }
-    virtual void setLoc(glslang::TSourceLoc l) { loc = l; }
+    TIntermNode() { loc.init(); }
+    virtual const glslang::TSourceLoc& getLoc() const { return loc; }
+    virtual void setLoc(const glslang::TSourceLoc& l) { loc = l; }
     virtual void traverse(glslang::TIntermTraverser*) = 0;
     virtual       glslang::TIntermTyped*         getAsTyped()               { return 0; }
     virtual       glslang::TIntermOperator*      getAsOperator()            { return 0; }
@@ -401,7 +488,8 @@ struct TIntermNodePair {
 //
 class TIntermTyped : public TIntermNode {
 public:
-	TIntermTyped(const TType& t) { type.shallowCopy(t); }
+    TIntermTyped(const TType& t) { type.shallowCopy(t); }
+    TIntermTyped(TBasicType basicType) { TType bt(basicType); type.shallowCopy(bt); }
     virtual       TIntermTyped* getAsTyped()       { return this; }
     virtual const TIntermTyped* getAsTyped() const { return this; }
     virtual void setType(const TType& t) { type.shallowCopy(t); }
@@ -437,10 +525,10 @@ public:
         terminal(aTerminal),
         first(testFirst) { }
     virtual void traverse(TIntermTraverser*);
-    TIntermNode*  getBody() { return body; }
-    TIntermTyped* getTest() { return test; }
-    TIntermTyped* getTerminal() { return terminal; }
-    bool testFirst() { return first; }
+    TIntermNode*  getBody() const { return body; }
+    TIntermTyped* getTest() const { return test; }
+    TIntermTyped* getTerminal() const { return terminal; }
+    bool testFirst() const { return first; }
 protected:
     TIntermNode* body;       // code to loop over
     TIntermTyped* test;      // exit condition associated with loop, could be 0 for 'for' loops
@@ -459,8 +547,8 @@ public:
     virtual       TIntermBranch* getAsBranchNode()       { return this; }
     virtual const TIntermBranch* getAsBranchNode() const { return this; }
     virtual void traverse(TIntermTraverser*);
-    TOperator getFlowOp() { return flowOp; }
-    TIntermTyped* getExpression() { return expression; }
+    TOperator getFlowOp() const { return flowOp; }
+    TIntermTyped* getExpression() const { return expression; }
 protected:
     TOperator flowOp;
     TIntermTyped* expression;
@@ -489,9 +577,9 @@ protected:
 //
 class TIntermSymbol : public TIntermTyped {
 public:
-	// if symbol is initialized as symbol(sym), the memory comes from the poolallocator of sym. If sym comes from
-	// per process threadPoolAllocator, then it causes increased memory usage per compile
-	// it is essential to use "symbol = sym" to assign to symbol
+    // if symbol is initialized as symbol(sym), the memory comes from the poolallocator of sym. If sym comes from
+    // per process threadPoolAllocator, then it causes increased memory usage per compile
+    // it is essential to use "symbol = sym" to assign to symbol
     TIntermSymbol(int i, const TString& n, const TType& t) : 
         TIntermTyped(t), id(i) { name = n;} 
     virtual int getId() const { return id; }
@@ -524,6 +612,18 @@ protected:
     bool literal;  // true if node represents a literal in the source code
 };
 
+// Represent the independent aspects of a texturing TOperator
+struct TCrackedTextureOp {
+    bool query;
+    bool proj;
+    bool lod;
+    bool fetch;
+    bool offset;
+    bool offsets;
+    bool gather;
+    bool grad;
+};
+
 //
 // Intermediate class for node types that hold operators.
 //
@@ -531,13 +631,108 @@ class TIntermOperator : public TIntermTyped {
 public:
     virtual       TIntermOperator* getAsOperator()       { return this; }
     virtual const TIntermOperator* getAsOperator() const { return this; }
-    TOperator getOp() { return op; }
+    TOperator getOp() const { return op; }
+    virtual bool promote() { return true; }
     bool modifiesState() const;
     bool isConstructor() const;
-    virtual bool promote() { return true; }
+    bool isTexture() const { return op > EOpTextureGuardBegin && op < EOpTextureGuardEnd; }
+    bool isImage()   const { return op > EOpImageGuardBegin   && op < EOpImageGuardEnd; }
+
+    // Crack the op into the individual dimensions of texturing operation.
+    void crackTexture(TSampler sampler, TCrackedTextureOp& cracked) const
+    {
+        cracked.query = false;
+        cracked.proj = false;
+        cracked.lod = false;
+        cracked.fetch = false;
+        cracked.offset = false;
+        cracked.offsets = false;
+        cracked.gather = false;
+        cracked.grad = false;
+
+        switch (op) {
+        case EOpImageQuerySize:
+        case EOpImageQuerySamples:
+        case EOpTextureQuerySize:
+        case EOpTextureQueryLod:
+        case EOpTextureQueryLevels:
+        case EOpTextureQuerySamples:
+            cracked.query = true;
+            break;
+        case EOpTexture:
+            break;
+        case EOpTextureProj:
+            cracked.proj = true;
+            break;
+        case EOpTextureLod:
+            cracked.lod = true;
+            break;
+        case EOpTextureOffset:
+            cracked.offset = true;
+            break;
+        case EOpTextureFetch:
+            cracked.fetch = true;
+            if (sampler.dim == Esd1D || (sampler.dim == Esd2D && ! sampler.ms) || sampler.dim == Esd3D)
+                cracked.lod = true;
+            break;
+        case EOpTextureFetchOffset:
+            cracked.fetch = true;
+            cracked.offset = true;
+            if (sampler.dim == Esd1D || (sampler.dim == Esd2D && ! sampler.ms) || sampler.dim == Esd3D)
+                cracked.lod = true;
+            break;
+        case EOpTextureProjOffset:
+            cracked.offset = true;
+            cracked.proj = true;
+            break;
+        case EOpTextureLodOffset:
+            cracked.offset = true;
+            cracked.lod = true;
+            break;
+        case EOpTextureProjLod:
+            cracked.lod = true;
+            cracked.proj = true;
+            break;
+        case EOpTextureProjLodOffset:
+            cracked.offset = true;
+            cracked.lod = true;
+            cracked.proj = true;
+            break;
+        case EOpTextureGrad:
+            cracked.grad = true;
+            break;
+        case EOpTextureGradOffset:
+            cracked.grad = true;
+            cracked.offset = true;
+            break;
+        case EOpTextureProjGrad:
+            cracked.grad = true;
+            cracked.proj = true;
+            break;
+        case EOpTextureProjGradOffset:
+            cracked.grad = true;
+            cracked.offset = true;
+            cracked.proj = true;
+            break;
+        case EOpTextureGather:
+            cracked.gather = true;
+            break;
+        case EOpTextureGatherOffset:
+            cracked.gather = true;
+            cracked.offset = true;
+            break;
+        case EOpTextureGatherOffsets:
+            cracked.gather = true;
+            cracked.offsets = true;
+            break;
+        default:
+            break;
+        }
+    }
+
 protected:
-    TIntermOperator(TOperator o) : TIntermTyped(TType(EbtFloat)), op(o) {}
-    TIntermOperator(TOperator o, TType& t) : TIntermTyped(t), op(o) {}   
+    TIntermOperator(TOperator o) : TIntermTyped(EbtFloat), op(o) {}
+    TIntermOperator(TOperator o, TType& t) : TIntermTyped(t), op(o) {}
     TOperator op;
 };
 
@@ -570,7 +765,8 @@ public:
     TIntermUnary(TOperator o) : TIntermOperator(o), operand(0) {}
     virtual void traverse(TIntermTraverser*);
     virtual void setOperand(TIntermTyped* o) { operand = o; }
-    virtual TIntermTyped* getOperand() { return operand; }
+    virtual       TIntermTyped* getOperand() { return operand; }
+    virtual const TIntermTyped* getOperand() const { return operand; }
     virtual       TIntermUnary* getAsUnaryNode()       { return this; }
     virtual const TIntermUnary* getAsUnaryNode() const { return this; }
     virtual bool promote();
@@ -588,35 +784,35 @@ class TIntermAggregate : public TIntermOperator {
 public:
     TIntermAggregate() : TIntermOperator(EOpNull), userDefined(false), pragmaTable(0) { }
     TIntermAggregate(TOperator o) : TIntermOperator(o), pragmaTable(0) { }
-	~TIntermAggregate() { delete pragmaTable; }
+    ~TIntermAggregate() { delete pragmaTable; }
     virtual       TIntermAggregate* getAsAggregate()       { return this; }
     virtual const TIntermAggregate* getAsAggregate() const { return this; }
     virtual void setOperator(TOperator o) { op = o; }
-    virtual TIntermSequence& getSequence() { return sequence; }
+    virtual       TIntermSequence& getSequence()       { return sequence; }
     virtual const TIntermSequence& getSequence() const { return sequence; }
-	virtual void setName(const TString& n) { name = n; }
+    virtual void setName(const TString& n) { name = n; }
     virtual const TString& getName() const { return name; }
     virtual void traverse(TIntermTraverser*);
     virtual void setUserDefined() { userDefined = true; }
     virtual bool isUserDefined() { return userDefined; }
     virtual TQualifierList& getQualifierList() { return qualifier; }
     virtual const TQualifierList& getQualifierList() const { return qualifier; }
-	void setOptimize(bool o) { optimize = o; }
-	void setDebug(bool d) { debug = d; }
-	bool getOptimize() { return optimize; }
-	bool getDebug() { return debug; }
-	void addToPragmaTable(const TPragmaTable& pTable);
-	const TPragmaTable& getPragmaTable() const { return *pragmaTable; }
+    void setOptimize(bool o) { optimize = o; }
+    void setDebug(bool d) { debug = d; }
+    bool getOptimize() const { return optimize; }
+    bool getDebug() const { return debug; }
+    void addToPragmaTable(const TPragmaTable& pTable);
+    const TPragmaTable& getPragmaTable() const { return *pragmaTable; }
 protected:
-	TIntermAggregate(const TIntermAggregate&); // disallow copy constructor
-	TIntermAggregate& operator=(const TIntermAggregate&); // disallow assignment operator
+    TIntermAggregate(const TIntermAggregate&); // disallow copy constructor
+    TIntermAggregate& operator=(const TIntermAggregate&); // disallow assignment operator
     TIntermSequence sequence;
     TQualifierList qualifier;
-	TString name;
+    TString name;
     bool userDefined; // used for user defined function names
-	bool optimize;
-	bool debug;
-	TPragmaTable* pragmaTable;
+    bool optimize;
+    bool debug;
+    TPragmaTable* pragmaTable;
 };
 
 //
@@ -625,7 +821,7 @@ protected:
 class TIntermSelection : public TIntermTyped {
 public:
     TIntermSelection(TIntermTyped* cond, TIntermNode* trueB, TIntermNode* falseB) :
-        TIntermTyped(TType(EbtVoid)), condition(cond), trueBlock(trueB), falseBlock(falseB) {}
+        TIntermTyped(EbtVoid), condition(cond), trueBlock(trueB), falseBlock(falseB) {}
     TIntermSelection(TIntermTyped* cond, TIntermNode* trueB, TIntermNode* falseB, const TType& type) :
         TIntermTyped(type), condition(cond), trueBlock(trueB), falseBlock(falseB) {}
     virtual void traverse(TIntermTraverser*);
@@ -694,15 +890,15 @@ public:
             maxDepth(0) { }
     virtual ~TIntermTraverser() { }
 
-    virtual void visitSymbol(TIntermSymbol*)                     { }
-    virtual void visitConstantUnion(TIntermConstantUnion*)       { }
-    virtual bool visitBinary(TVisit visit, TIntermBinary*)       { return true; }
-    virtual bool visitUnary(TVisit visit, TIntermUnary*)         { return true; }
-    virtual bool visitSelection(TVisit visit, TIntermSelection*) { return true; }
-    virtual bool visitAggregate(TVisit visit, TIntermAggregate*) { return true; }
-    virtual bool visitLoop(TVisit visit, TIntermLoop*)           { return true; }
-    virtual bool visitBranch(TVisit visit, TIntermBranch*)       { return true; }
-    virtual bool visitSwitch(TVisit, TIntermSwitch* node)        { return true; }
+    virtual void visitSymbol(TIntermSymbol*)               { }
+    virtual void visitConstantUnion(TIntermConstantUnion*) { }
+    virtual bool visitBinary(TVisit, TIntermBinary*)       { return true; }
+    virtual bool visitUnary(TVisit, TIntermUnary*)         { return true; }
+    virtual bool visitSelection(TVisit, TIntermSelection*) { return true; }
+    virtual bool visitAggregate(TVisit, TIntermAggregate*) { return true; }
+    virtual bool visitLoop(TVisit, TIntermLoop*)           { return true; }
+    virtual bool visitBranch(TVisit, TIntermBranch*)       { return true; }
+    virtual bool visitSwitch(TVisit, TIntermSwitch*)       { return true; }
 
     int getMaxDepth() const { return maxDepth; }
 
@@ -730,6 +926,8 @@ public:
     const bool rightToLeft;
 
 protected:
+    TIntermTraverser& operator=(TIntermTraverser&);
+
     int depth;
     int maxDepth;
 
