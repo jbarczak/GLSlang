@@ -57,17 +57,21 @@ enum TBasicType {
 };
 
 //
-// Qualifiers and built-ins.  These are mainly used to see what can be read
-// or written, and by the machine dependent translator to know which registers
-// to allocate variables in.  Since built-ins tend to go to different registers
-// than varying or uniform, it makes sense they are peers, not sub-classes.
+// Storage qualifiers.  Should align with different kinds of storage or
+// resource or GLSL storage qualifier.  Expansion is deprecated.
+//
+// N.B.: You probably DON'T want to add anything here, but rather just add it
+// to the built-in variables.  See the comment above TBuiltInVariable.
+//
+// A new built-in variable will normally be an existing qualifier, like 'in', 'out', etc.
+// DO NOT follow the design pattern of, say EvqInstanceId, etc.
 //
 enum TStorageQualifier {
     EvqTemporary,     // For temporaries (within a function), read/write
     EvqGlobal,        // For globals read/write
     EvqConst,         // User-defined constant values, will be semantically constant and constant folded
-    EvqVaryingIn,     // pipeline input, read only
-    EvqVaryingOut,    // pipeline ouput, read/write
+    EvqVaryingIn,     // pipeline input, read only, also supercategory for all built-ins not included in this enum (see TBuiltInVariable)
+    EvqVaryingOut,    // pipeline ouput, read/write, also supercategory for all built-ins not included in this enum (see TBuiltInVariable)
     EvqUniform,       // read only, shared with app
     EvqBuffer,        // read/write, shared with app
     EvqShared,        // compute shader's read/write 'shared' qualifier
@@ -97,14 +101,89 @@ enum TStorageQualifier {
     EvqFragDepth,
 
     // end of list
-    EvqLast,
+    EvqLast
+};
+
+//
+// Subcategories of the TStorageQualifier, simply to give a direct mapping
+// between built-in variable names and an numerical value (the enum).
+//
+// For backward compatibility, there is some redundancy between the
+// TStorageQualifier and these.  Existing members should both be maintained accurately.
+// However, any new built-in variable (and any existing non-redundant one)
+// must follow the pattern that the specific built-in is here, and only its
+// general qualifier is in TStorageQualifier.
+//
+// Something like gl_Position, which is sometimes 'in' and sometimes 'out'
+// shows up as two different built-in variables in a single stage, but
+// only has a single enum in TBuiltInVariable, so both the
+// TStorageQualifier and the TBuitinVariable are needed to distinguish
+// between them.
+//
+enum TBuiltInVariable {
+    EbvNone,
+    EbvNumWorkGroups,
+    EbvWorkGroupSize,
+    EbvWorkGroupId,
+    EbvLocalInvocationId,
+    EbvGlobalInvocationId,
+    EbvLocalInvocationIndex,
+    EbvVertexId,
+    EbvInstanceId,
+    EbvBaseVertex,
+    EbvBaseInstance,
+    EbvDrawId,
+    EbvPosition,
+    EbvPointSize,
+    EbvClipVertex,
+    EbvClipDistance,
+    EbvCullDistance,
+    EbvNormal,
+    EbvVertex,
+    EbvMultiTexCoord0,
+    EbvMultiTexCoord1,
+    EbvMultiTexCoord2,
+    EbvMultiTexCoord3,
+    EbvMultiTexCoord4,
+    EbvMultiTexCoord5,
+    EbvMultiTexCoord6,
+    EbvMultiTexCoord7,
+    EbvFrontColor,
+    EbvBackColor,
+    EbvFrontSecondaryColor,
+    EbvBackSecondaryColor,
+    EbvTexCoord,
+    EbvFogFragCoord,
+    EbvInvocationId,
+    EbvPrimitiveId,
+    EbvLayer,
+    EbvViewportIndex,
+    EbvPatchVertices,
+    EbvTessLevelOuter,
+    EbvTessLevelInner,
+    EbvBoundingBox,
+    EbvTessCoord,
+    EbvColor,
+    EbvSecondaryColor,
+    EbvFace,
+    EbvFragCoord,
+    EbvPointCoord,
+    EbvFragColor,
+    EbvFragData,
+    EbvFragDepth,
+    EbvSampleId,
+    EbvSamplePosition,
+    EbvSampleMask,
+    EbvHelperInvocation,
+
+    EbvLast
 };
 
 // These will show up in error messages
 __inline const char* GetStorageQualifierString(TStorageQualifier q) 
 {
     switch (q) {
-    case EvqTemporary:      return "temporary";      break;
+    case EvqTemporary:      return "temp";           break;
     case EvqGlobal:         return "global";         break;
     case EvqConst:          return "const";          break;
     case EvqConstReadOnly:  return "const (read only)"; break;
@@ -127,6 +206,67 @@ __inline const char* GetStorageQualifierString(TStorageQualifier q)
     case EvqFragColor:      return "fragColor";      break;
     case EvqFragDepth:      return "gl_FragDepth";   break;
     default:                return "unknown qualifier";
+    }
+}
+
+__inline const char* GetBuiltInVariableString(TBuiltInVariable v)
+{
+    switch (v) {
+    case EbvNone:                 return "";
+    case EbvNumWorkGroups:        return "NumWorkGroups";
+    case EbvWorkGroupSize:        return "WorkGroupSize";
+    case EbvWorkGroupId:          return "WorkGroupID";
+    case EbvLocalInvocationId:    return "LocalInvocationID";
+    case EbvGlobalInvocationId:   return "GlobalInvocationID";
+    case EbvLocalInvocationIndex: return "LocalInvocationIndex";
+    case EbvVertexId:             return "VertexId";
+    case EbvInstanceId:           return "InstanceId";
+    case EbvBaseVertex:           return "BaseVertex";
+    case EbvBaseInstance:         return "BaseInstance";
+    case EbvDrawId:               return "DrawId";
+    case EbvPosition:             return "Position";
+    case EbvPointSize:            return "PointSize";
+    case EbvClipVertex:           return "ClipVertex";
+    case EbvClipDistance:         return "ClipDistance";
+    case EbvCullDistance:         return "CullDistance";
+    case EbvNormal:               return "Normal";
+    case EbvVertex:               return "Vertex";
+    case EbvMultiTexCoord0:       return "MultiTexCoord0";
+    case EbvMultiTexCoord1:       return "MultiTexCoord1";
+    case EbvMultiTexCoord2:       return "MultiTexCoord2";
+    case EbvMultiTexCoord3:       return "MultiTexCoord3";
+    case EbvMultiTexCoord4:       return "MultiTexCoord4";
+    case EbvMultiTexCoord5:       return "MultiTexCoord5";
+    case EbvMultiTexCoord6:       return "MultiTexCoord6";
+    case EbvMultiTexCoord7:       return "MultiTexCoord7";
+    case EbvFrontColor:           return "FrontColor";
+    case EbvBackColor:            return "BackColor";
+    case EbvFrontSecondaryColor:  return "FrontSecondaryColor";
+    case EbvBackSecondaryColor:   return "BackSecondaryColor";
+    case EbvTexCoord:             return "TexCoord";
+    case EbvFogFragCoord:         return "FogFragCoord";
+    case EbvInvocationId:         return "InvocationID";
+    case EbvPrimitiveId:          return "PrimitiveID";
+    case EbvLayer:                return "Layer";
+    case EbvViewportIndex:        return "ViewportIndex";
+    case EbvPatchVertices:        return "PatchVertices";
+    case EbvTessLevelOuter:       return "TessLevelOuter";
+    case EbvTessLevelInner:       return "TessLevelInner";
+    case EbvBoundingBox:          return "BoundingBox";
+    case EbvTessCoord:            return "TessCoord";
+    case EbvColor:                return "Color";
+    case EbvSecondaryColor:       return "SecondaryColor";
+    case EbvFace:                 return "Face";
+    case EbvFragCoord:            return "FragCoord";
+    case EbvPointCoord:           return "PointCoord";
+    case EbvFragColor:            return "FragColor";
+    case EbvFragData:             return "FragData";
+    case EbvFragDepth:            return "FragDepth";
+    case EbvSampleId:             return "SampleId";
+    case EbvSamplePosition:       return "SamplePosition";
+    case EbvSampleMask:           return "SampleMaskIn";
+    case EbvHelperInvocation:     return "HelperInvocation";
+    default:                      return "unknown built-in variable";
     }
 }
 

@@ -89,6 +89,8 @@ void TType::buildMangledName(TString& mangledName)
         case EsdBuffer:   mangledName += "B";  break;
         default: break; // some compilers want this
         }
+        if (sampler.ms)
+            mangledName += "M";
         break;
     case EbtStruct:
         mangledName += "struct-";
@@ -112,10 +114,12 @@ void TType::buildMangledName(TString& mangledName)
     if (arraySizes) {
         const int maxSize = 11;
         char buf[maxSize];
-        snprintf(buf, maxSize, "%d", arraySizes->sizes.front());
-        mangledName += '[';
-        mangledName += buf;
-        mangledName += ']';
+        for (int i = 0; i < arraySizes->getNumDims(); ++i) {
+            snprintf(buf, maxSize, "%d", arraySizes->getDimSize(i));
+            mangledName += '[';
+            mangledName += buf;
+            mangledName += ']';
+        }
     }
 }
 
@@ -238,7 +242,7 @@ TVariable::TVariable(const TVariable& copyOf) : TSymbol(copyOf)
     userType = copyOf.userType;
     numExtensions = 0;
     extensions = 0;
-    if (copyOf.numExtensions > 0)
+    if (copyOf.numExtensions != 0)
         setExtensions(copyOf.numExtensions, copyOf.extensions);
 
     if (! copyOf.unionArray.empty()) {

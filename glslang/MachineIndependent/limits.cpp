@@ -74,6 +74,10 @@ public:
     TSymbolTable& symbolTable;
     bool bad;
     TSourceLoc badLoc;
+
+protected:
+    TInductiveTraverser(TInductiveTraverser&);
+    TInductiveTraverser& operator=(TInductiveTraverser&);
 };
 
 // check binary operations for those modifying the loop index
@@ -129,7 +133,7 @@ void TParseContext::inductiveLoopBodyCheck(TIntermNode* body, int loopId, TSymbo
 {
     TInductiveTraverser it(loopId, symbolTable);
 
-    if (! body)
+    if (body == nullptr)
         return;
 
     body->traverse(&it);
@@ -152,6 +156,10 @@ public:
     const TIdSetType& inductiveLoopIds;
     bool bad;
     TSourceLoc badLoc;
+
+protected:
+    TIndexTraverser(TIndexTraverser&);
+    TIndexTraverser& operator=(TIndexTraverser&);
 };
 
 // make sure symbols are inductive-loop indexes

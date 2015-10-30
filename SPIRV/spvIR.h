@@ -50,15 +50,23 @@
 #ifndef spvIR_H
 #define spvIR_H
 
-#include "spirv.h"
+#include "spirv.hpp"
 
 #include <vector>
 #include <iostream>
+#include <assert.h>
 
 namespace spv {
 
 class Function;
 class Module;
+
+const Id NoResult = 0;
+const Id NoType = 0;
+
+const unsigned int BadValue = 0xFFFFFFFF;
+const Decoration NoPrecision = (Decoration)BadValue;
+const MemorySemanticsMask MemorySemanticsAllMemory = (MemorySemanticsMask)0x3FF;
 
 //
 // SPIR-V IR instruction.
@@ -66,8 +74,8 @@ class Module;
 
 class Instruction {
 public:
-    Instruction(Id resultId, Id typeId, OpCode opCode) : resultId(resultId), typeId(typeId), opCode(opCode), string(0) { }
-    explicit Instruction(OpCode opCode) : resultId(NoResult), typeId(NoType), opCode(opCode), string(0) { }
+    Instruction(Id resultId, Id typeId, Op opCode) : resultId(resultId), typeId(typeId), opCode(opCode), string(0) { }
+    explicit Instruction(Op opCode) : resultId(NoResult), typeId(NoType), opCode(opCode), string(0) { }
     virtual ~Instruction()
     {
         delete string;
@@ -76,6 +84,7 @@ public:
     void addImmediateOperand(unsigned int immediate) { operands.push_back(immediate); }
     void addStringOperand(const char* str)
     {
+        originalString = str;
         string = new std::vector<unsigned int>;
         unsigned int word;
         char* wordString = (char*)&word;
@@ -100,11 +109,9 @@ public:
                 *(wordPtr++) = 0;
             string->push_back(word);
         }
-
-        originalString = str;
     }
-    OpCode getOpCode() const { return opCode; }
-    int getNumOperands() const { return operands.size(); }
+    Op getOpCode() const { return opCode; }
+    int getNumOperands() const { return (int)operands.size(); }
     Id getResultId() const { return resultId; }
     Id getTypeId() const { return typeId; }
     Id getIdOperand(int op) const { return operands[op]; }
@@ -120,9 +127,9 @@ public:
             ++wordCount;
         if (resultId)
             ++wordCount;
-        wordCount += operands.size();
+        wordCount += (unsigned int)operands.size();
         if (string)
-            wordCount += string->size();
+            wordCount += (unsigned int)string->size();
 
         // Write out the beginning of the instruction
         out.push_back(((wordCount) << WordCountShift) | opCode);
@@ -143,7 +150,7 @@ protected:
     Instruction(const Instruction&);
     Id resultId;
     Id typeId;
-    OpCode opCode;
+    Op opCode;
     std::vector<Id> operands;
     std::vector<unsigned int>* string; // usually non-existent
     std::string originalString;        // could be optimized away; convenience for getting string operand
@@ -155,8 +162,6 @@ protected:
 
 class Block {
 public:
-    // Setting insert to true indicates to add this new block 
-    // to the end of the parent function.
     Block(Id id, Function& parent);
     virtual ~Block()
     {
@@ -170,6 +175,8 @@ public:
     void addPredecessor(Block* pred) { predecessors.push_back(pred); }
     void addLocalVariable(Instruction* inst) { localVariables.push_back(inst); }
     int getNumPredecessors() const { return (int)predecessors.size(); }
+    void setUnreachable() { unreachable = true; }
+    bool isUnreachable() const { return unreachable; }
 
     bool isTerminated() const
     {
@@ -188,6 +195,12 @@ public:
 
     void dump(std::vector<unsigned int>& out) const
     {
+        // skip the degenerate unreachable blocks
+        // TODO: code gen: skip all unreachable blocks (transitive closure)
+        //                 (but, until that's done safer to keep non-degenerate unreachable blocks, in case others depend on something)
+        if (unreachable && instructions.size() <= 2)
+            return;
+
         instructions[0]->dump(out);
         for (int i = 0; i < (int)localVariables.size(); ++i)
             localVariables[i]->dump(out);
@@ -197,6 +210,7 @@ public:
 
 protected:
     Block(const Block&);
+    Block& operator=(Block&);
 
     // To enforce keeping parent and ownership in sync:
     friend Function;
@@ -205,6 +219,11 @@ protected:
     std::vector<Block*> predecessors;
     std::vector<Instruction*> localVariables;
     Function& parent;
+
+    // track whether this block is known to be uncreachable (not necessarily 
+    // true for all unreachable blocks, but should be set at least
+    // for the extraneous ones introduced by the builder).
+    bool unreachable;
 };
 
 //
@@ -226,7 +245,7 @@ public:
     Id getParamId(int p) { return parameterInstructions[p]->getResultId(); }
 
     void addBlock(Block* block) { blocks.push_back(block); }
-    void popBlock(Block* block) { assert(blocks.back() == block); blocks.pop_back(); }
+    void popBlock(Block*) { blocks.pop_back(); }
 
     Module& getParent() const { return parent; }
     Block* getEntryBlock() const { return blocks.front(); }
@@ -251,6 +270,8 @@ public:
 
 protected:
     Function(const Function&);
+    Function& operator=(Function&);
+
     Module& parent;
     Instruction functionInstruction;
     std::vector<Instruction*> parameterInstructions;
@@ -310,7 +331,7 @@ __inline Function::Function(Id id, Id resultType, Id functionType, Id firstParam
     : parent(parent), functionInstruction(id, resultType, OpFunction)
 {
     // OpFunction
-    functionInstruction.addImmediateOperand(FunctionControlNone);
+    functionInstruction.addImmediateOperand(FunctionControlMaskNone);
     functionInstruction.addIdOperand(functionType);
     parent.mapInstruction(&functionInstruction);
     parent.addFunction(this);
@@ -331,7 +352,7 @@ __inline void Function::addLocalVariable(Instruction* inst)
     parent.mapInstruction(inst);
 }
 
-__inline Block::Block(Id id, Function& parent) : parent(parent)
+__inline Block::Block(Id id, Function& parent) : parent(parent), unreachable(false)
 {
     instructions.push_back(new Instruction(id, NoType, OpLabel));
 }

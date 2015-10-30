@@ -48,7 +48,7 @@
 #ifndef SpvBuilder_H
 #define SpvBuilder_H
 
-#include "spirv.h"
+#include "spirv.hpp"
 #include "spvIR.h"
 
 #include <algorithm>
@@ -77,6 +77,8 @@ public:
         memoryModel = mem;
     }
 
+    void addCapability(spv::Capability cap) { capabilities.push_back(cap); }
+
     // To get a new <id> for anything needing a new one.
     Id getUniqueId() { return ++uniqueId; }
 
@@ -100,20 +102,17 @@ public:
     Id makeVectorType(Id component, int size);
     Id makeMatrixType(Id component, int cols, int rows);
     Id makeArrayType(Id element, unsigned size);
+    Id makeRuntimeArray(Id element);
     Id makeFunctionType(Id returnType, std::vector<Id>& paramTypes);
-    enum samplerContent {
-        samplerContentTexture,
-        samplerContentImage,
-        samplerContentTextureFilter
-    };
-    Id makeSampler(Id sampledType, Dimensionality, samplerContent, bool arrayed, bool shadow, bool ms);
+    Id makeImageType(Id sampledType, Dim, bool depth, bool arrayed, bool ms, unsigned sampled, ImageFormat format);
+    Id makeSampledImageType(Id imageType);
 
     // For querying about types.
     Id getTypeId(Id resultId) const { return module.getTypeId(resultId); }
     Id getDerefTypeId(Id resultId) const;
-    OpCode getOpCode(Id id) const { return module.getInstruction(id)->getOpCode(); }
-    OpCode getTypeClass(Id typeId) const { return getOpCode(typeId); }
-    OpCode getMostBasicTypeClass(Id typeId) const;
+    Op getOpCode(Id id) const { return module.getInstruction(id)->getOpCode(); }
+    Op getTypeClass(Id typeId) const { return getOpCode(typeId); }
+    Op getMostBasicTypeClass(Id typeId) const;
     int getNumComponents(Id resultId) const { return getNumTypeComponents(getTypeId(resultId)); }
     int getNumTypeComponents(Id typeId) const;
     Id getScalarTypeId(Id typeId) const;
@@ -133,8 +132,12 @@ public:
     bool isStructType(Id typeId)    const { return getTypeClass(typeId) == OpTypeStruct; }
     bool isArrayType(Id typeId)     const { return getTypeClass(typeId) == OpTypeArray; }
     bool isAggregateType(Id typeId) const { return isArrayType(typeId) || isStructType(typeId); }
+    bool isImageType(Id typeId)     const { return getTypeClass(typeId) == OpTypeImage; }
     bool isSamplerType(Id typeId)   const { return getTypeClass(typeId) == OpTypeSampler; }
+    bool isSampledImageType(Id typeId)   const { return getTypeClass(typeId) == OpTypeSampledImage; }
 
+    bool isConstantOpCode(Op opcode) const;
+    bool isConstant(Id resultId) const { return isConstantOpCode(getOpCode(resultId)); }
     bool isConstantScalar(Id resultId) const { return getOpCode(resultId) == OpConstant; }
     unsigned int getConstantScalar(Id resultId) const { return module.getInstruction(resultId)->getImmediateOperand(0); }
 
@@ -151,15 +154,21 @@ public:
     }
     int getNumRows(Id resultId) const { return getTypeNumRows(getTypeId(resultId)); }
 
-    Dimensionality getDimensionality(Id resultId) const
+    Dim getTypeDimensionality(Id typeId) const
     {
-        assert(isSamplerType(getTypeId(resultId)));
-        return (Dimensionality)module.getInstruction(getTypeId(resultId))->getImmediateOperand(1);
+        assert(isImageType(typeId));
+        return (Dim)module.getInstruction(typeId)->getImmediateOperand(1);
     }
-    bool isArrayedSampler(Id resultId) const
+    Id getImageType(Id resultId) const
     {
-        assert(isSamplerType(getTypeId(resultId)));
-        return module.getInstruction(getTypeId(resultId))->getImmediateOperand(3) != 0;
+        Id typeId = getTypeId(resultId);
+        assert(isImageType(typeId) || isSampledImageType(typeId));
+        return isSampledImageType(typeId) ? module.getInstruction(typeId)->getIdOperand(0) : typeId;
+    }
+    bool isArrayedImageType(Id typeId) const
+    {
+        assert(isImageType(typeId));
+        return module.getInstruction(typeId)->getImmediateOperand(3) != 0;
     }
 
     // For making new constants (will return old constant if the requested one was already made).
@@ -174,8 +183,8 @@ public:
     Id makeCompositeConstant(Id type, std::vector<Id>& comps);
 
     // Methods for adding information outside the CFG.
-    void addEntryPoint(ExecutionModel, Function*);
-    void addExecutionMode(Function*, ExecutionMode mode, int value = -1);
+    void addEntryPoint(ExecutionModel, Function*, const char* name);
+    void addExecutionMode(Function*, ExecutionMode mode, int value1 = -1, int value2 = -1, int value3 = -1);
     void addName(Id, const char* name);
     void addMemberName(Id, int member, const char* name);
     void addLine(Id target, Id fileName, int line, int column);
@@ -189,29 +198,25 @@ public:
     // Make the main function.
     Function* makeMain();
 
-    // Return from main. Implicit denotes a return at the very end of main.
-    void makeMainReturn(bool implicit = false) { makeReturn(implicit, 0, true); }
-
-    // Close the main function.
-    void closeMain();
-
     // Make a shader-style function, and create its entry block if entry is non-zero.
     // Return the function, pass back the entry.
     Function* makeFunctionEntry(Id returnType, const char* name, std::vector<Id>& paramTypes, Block **entry = 0);
 
-    // Create a return. Pass whether it is a return form main, and the return
-    // value (if applicable). In the case of an implicit return, no post-return
-    // block is inserted.
-    void makeReturn(bool implicit = false, Id retVal = 0, bool isMain = false);
+    // Create a return. An 'implicit' return is one not appearing in the source
+    // code.  In the case of an implicit return, no post-return block is inserted.
+    void makeReturn(bool implicit, Id retVal = 0);
 
     // Generate all the code needed to finish up a function.
-    void leaveFunction(bool main);
+    void leaveFunction();
 
     // Create a discard.
     void makeDiscard();
 
     // Create a global or function local or IO variable.
     Id createVariable(StorageClass, Id type, const char* name = 0);
+
+    // Create an imtermediate with an undefined value.
+    Id createUndefined(Id type);
 
     // Store into an Id and return the l-value
     void createStore(Id rValue, Id lValue);
@@ -222,19 +227,27 @@ public:
     // Create an OpAccessChain instruction
     Id createAccessChain(StorageClass, Id base, std::vector<Id>& offsets);
 
+    // Create an OpArrayLength instruction
+    Id createArrayLength(Id base, unsigned int member);
+
     // Create an OpCompositeExtract instruction
     Id createCompositeExtract(Id composite, Id typeId, unsigned index);
     Id createCompositeExtract(Id composite, Id typeId, std::vector<unsigned>& indexes);
     Id createCompositeInsert(Id object, Id composite, Id typeId, unsigned index);
     Id createCompositeInsert(Id object, Id composite, Id typeId, std::vector<unsigned>& indexes);
 
-    Id createEmptyOp(OpCode);
-    void createControlBarrier(unsigned executionScope);
+    Id createVectorExtractDynamic(Id vector, Id typeId, Id componentIndex);
+    Id createVectorInsertDynamic(Id vector, Id typeId, Id component, Id componentIndex);
+
+    void createNoResultOp(Op);
+    void createNoResultOp(Op, Id operand);
+    void createNoResultOp(Op, const std::vector<Id>& operands);
+    void createControlBarrier(Scope execution, Scope memory, MemorySemanticsMask);
     void createMemoryBarrier(unsigned executionScope, unsigned memorySemantics);
-    Id createUnaryOp(OpCode, Id typeId, Id operand);
-    Id createBinOp(OpCode, Id typeId, Id operand1, Id operand2);
-    Id createTriOp(OpCode, Id typeId, Id operand1, Id operand2, Id operand3);
-    Id createTernaryOp(OpCode, Id typeId, Id operand1, Id operand2, Id operand3);
+    Id createUnaryOp(Op, Id typeId, Id operand);
+    Id createBinOp(Op, Id typeId, Id operand1, Id operand2);
+    Id createTriOp(Op, Id typeId, Id operand1, Id operand2, Id operand3);
+    Id createOp(Op, Id typeId, const std::vector<Id>& operands);
     Id createFunctionCall(spv::Function*, std::vector<spv::Id>&);
 
     // Take an rvalue (source) and a set of channels to extract from it to
@@ -243,13 +256,13 @@ public:
 
     // Take a copy of an lvalue (target) and a source of components, and set the
     // source components into the lvalue where the 'channels' say to put them.
-    // An update version of the target is returned.
+    // An updated version of the target is returned.
     // (No true lvalue or stores are used.)
     Id createLvalueSwizzle(Id typeId, Id target, Id source, std::vector<unsigned>& channels);
 
     // If the value passed in is an instruction and the precision is not EMpNone,
     // it gets tagged with the requested precision.
-    void setPrecision(Id value, Decoration precision)
+    void setPrecision(Id /* value */, Decoration /* precision */)
     {
         // TODO
     }
@@ -279,16 +292,18 @@ public:
         Id lod;
         Id Dref;
         Id offset;
+        Id offsets;
         Id gradX;
         Id gradY;
+        Id sample;
     };
 
     // Select the correct texture operation based on all inputs, and emit the correct instruction
-    Id createTextureCall(Decoration precision, Id resultType, bool proj, const TextureParameters&);
+    Id createTextureCall(Decoration precision, Id resultType, bool fetch, bool proj, const TextureParameters&);
 
     // Emit the OpTextureQuery* instruction that was passed in.
     // Figure out the right return value and type, and return it.
-    Id createTextureQueryCall(OpCode, const TextureParameters&);
+    Id createTextureQueryCall(Op, const TextureParameters&);
 
     Id createSamplePositionCall(Decoration precision, Id, Id);
 
@@ -317,6 +332,9 @@ public:
         void makeEndIf();
 
     private:
+        If(const If&);
+        If& operator=(If&);
+
         Builder& builder;
         Id condition;
         Function* function;
@@ -350,16 +368,26 @@ public:
     // Finish off the innermost switch.
     void endSwitch(std::vector<Block*>& segmentBB);
 
-    // Start the beginning of a new loop.
-    void makeNewLoop();
+    // Start the beginning of a new loop, and prepare the builder to
+    // generate code for the loop test.
+    // The loopTestFirst parameter is true when the loop test executes before
+    // the body.  (It is false for do-while loops.)
+    void makeNewLoop(bool loopTestFirst);
 
-    // Add the branch at the end of the loop header, and leave the build position
-    // in the first block of the body.
-    // 'condition' is true if should exit the loop
-    void createLoopHeaderBranch(Id condition);
+    // Add the branch for the loop test, based on the given condition.
+    // The true branch goes to the first block in the loop body, and
+    // the false branch goes to the loop's merge block.  The builder insertion
+    // point will be placed at the start of the body.
+    void createLoopTestBranch(Id condition);
 
-    // Add a back-edge (e.g "continue") for the innermost loop that you're in
-    void createLoopBackEdge(bool implicit=false);
+    // Generate an unconditional branch to the loop body.  The builder insertion
+    // point will be placed at the start of the body.  Use this when there is
+    // no loop test.
+    void createBranchToBody();
+
+    // Add a branch to the test of the current (innermost) loop.
+    // The way we generate code, that's also the loop header.
+    void createLoopContinue();
 
     // Add an exit (e.g. "break") for the innermost loop that you're in
     void createLoopExit();
@@ -402,9 +430,8 @@ public:
         std::vector<Id> indexChain;
         Id instr;                    // the instruction that generates this access chain
         std::vector<unsigned> swizzle;
-        Id component;                // a dynamic component index
-        int swizzleTargetWidth;
-        Id resultType;               // dereferenced type, to be inclusive of swizzles, which can't have a pointer
+        Id component;                // a dynamic component index, can coexist with a swizzle, done after the swizzle
+        Id preSwizzleBaseType;       // dereferenced type, before swizzle or component is applied; NoType unless a swizzle or component is present
         bool isRValue;
     };
 
@@ -432,27 +459,30 @@ public:
     {
         accessChain.isRValue = true;
         accessChain.base = rValue;
-        accessChain.resultType = getTypeId(rValue);
     }
 
     // push offset onto the end of the chain
-    void accessChainPush(Id offset, Id newType)
+    void accessChainPush(Id offset)
     {
         accessChain.indexChain.push_back(offset);
-        accessChain.resultType = newType;
     }
 
     // push new swizzle onto the end of any existing swizzle, merging into a single swizzle
-    void accessChainPushSwizzle(std::vector<unsigned>& swizzle, int width, Id type);
+    void accessChainPushSwizzle(std::vector<unsigned>& swizzle, Id preSwizzleBaseType);
 
     // push a variable component selection onto the access chain; supporting only one, so unsided
-    void accessChainPushComponent(Id component) { accessChain.component = component; }
+    void accessChainPushComponent(Id component, Id preSwizzleBaseType)
+    {
+        accessChain.component = component;
+        if (accessChain.preSwizzleBaseType == NoType)
+            accessChain.preSwizzleBaseType = preSwizzleBaseType;
+    }
 
     // use accessChain and swizzle to store value
     void accessChainStore(Id rvalue);
 
     // use accessChain and swizzle to load an r-value
-    Id accessChainLoad(Decoration precision);
+    Id accessChainLoad(Id ResultType);
 
     // get the direct pointer for an l-value
     Id accessChainGetLValue();
@@ -460,27 +490,32 @@ public:
     void dump(std::vector<unsigned int>&) const;
 
 protected:
-    Id findScalarConstant(OpCode typeClass, Id typeId, unsigned value) const;
-    Id findCompositeConstant(OpCode typeClass, std::vector<Id>& comps) const;
+    Id findScalarConstant(Op typeClass, Id typeId, unsigned value) const;
+    Id findScalarConstant(Op typeClass, Id typeId, unsigned v1, unsigned v2) const;
+    Id findCompositeConstant(Op typeClass, std::vector<Id>& comps) const;
     Id collapseAccessChain();
     void simplifyAccessChainSwizzle();
+    void mergeAccessChainSwizzle();
     void createAndSetNoPredecessorBlock(const char*);
     void createBranch(Block* block);
-    void createMerge(OpCode, Block*, unsigned int control);
+    void createMerge(Op, Block*, unsigned int control);
     void createConditionalBranch(Id condition, Block* thenBlock, Block* elseBlock);
     void dumpInstructions(std::vector<unsigned int>&, const std::vector<Instruction*>&) const;
+
+    struct Loop; // Defined below.
+    void createBranchToLoopHeaderFromInside(const Loop& loop);
 
     SourceLanguage source;
     int sourceVersion;
     std::vector<const char*> extensions;
     AddressingModel addressModel;
     MemoryModel memoryModel;
+    std::vector<spv::Capability> capabilities;
     int builderNumber;
     Module module;
     Block* buildPoint;
     Id uniqueId;
     Function* mainFunction;
-    Block* stageExit;
     AccessChain accessChain;
 
     // special blocks of instructions for output
@@ -502,17 +537,52 @@ protected:
 
     // Data that needs to be kept in order to properly handle loops.
     struct Loop {
-        Block* header;
-        Block* merge;
-        Function* function;
+        // Constructs a default Loop structure containing new header, merge, and
+        // body blocks for the current function.
+        // The testFirst argument indicates whether the loop test executes at
+        // the top of the loop rather than at the bottom.  In the latter case,
+        // also create a phi instruction whose value indicates whether we're on
+        // the first iteration of the loop.  The phi instruction is initialized
+        // with no values or predecessor operands.
+        Loop(Builder& builder, bool testFirst);
+
+        // The function containing the loop.
+        Function* const function;
+        // The header is the first block generated for the loop.
+        // It dominates all the blocks in the loop, i.e. it is always
+        // executed before any others.
+        // If the loop test is executed before the body (as in "while" and
+        // "for" loops), then the header begins with the test code.
+        // Otherwise, the loop is a "do-while" loop and the header contains the
+        // start of the body of the loop (if the body exists).
+        Block* const header;
+        // The merge block marks the end of the loop.  Control is transferred
+        // to the merge block when either the loop test fails, or when a
+        // nested "break" is encountered.
+        Block* const merge;
+        // The body block is the first basic block in the body of the loop, i.e.
+        // the code that is to be repeatedly executed, aside from loop control.
+        // This member is null until we generate code that references the loop
+        // body block.
+        Block* const body;
+        // True when the loop test executes before the body.
+        const bool testFirst;
+        // When the test executes after the body, this is defined as the phi
+        // instruction that tells us whether we are on the first iteration of
+        // the loop.  Otherwise this is null. This is non-const because
+        // it has to be initialized outside of the initializer-list.
+        Instruction* isFirstIteration;
     };
 
     // Our loop stack.
     std::stack<Loop> loops;
 };  // end Builder class
 
+// Use for non-fatal notes about what's not complete
+void TbdFunctionality(const char*);
+
+// Use for fatal missing functionality
 void MissingFunctionality(const char*);
-void ValidationError(const char* error);
 
 };  // end spv namespace
 

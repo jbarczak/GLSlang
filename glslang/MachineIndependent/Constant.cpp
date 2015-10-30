@@ -132,6 +132,7 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TIntermTyped* const
     }
 
     TConstUnionArray newConstArray(newComps);
+    TType constBool(EbtBool, EvqConst);
 
     switch(op) {
     case EOpAdd:
@@ -265,27 +266,27 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TIntermTyped* const
 
     case EOpLessThan:
         newConstArray[0].setBConst(unionArray[0] < rightUnionArray[0]);
-        returnType.shallowCopy(TType(EbtBool, EvqConst));
+        returnType.shallowCopy(constBool);
         break;
     case EOpGreaterThan:
         newConstArray[0].setBConst(unionArray[0] > rightUnionArray[0]);
-        returnType.shallowCopy(TType(EbtBool, EvqConst));
+        returnType.shallowCopy(constBool);
         break;
     case EOpLessThanEqual:
         newConstArray[0].setBConst(! (unionArray[0] > rightUnionArray[0]));
-        returnType.shallowCopy(TType(EbtBool, EvqConst));
+        returnType.shallowCopy(constBool);
         break;
     case EOpGreaterThanEqual:
         newConstArray[0].setBConst(! (unionArray[0] < rightUnionArray[0]));
-        returnType.shallowCopy(TType(EbtBool, EvqConst));
+        returnType.shallowCopy(constBool);
         break;
     case EOpEqual:
         newConstArray[0].setBConst(node->getConstArray() == unionArray);
-        returnType.shallowCopy(TType(EbtBool, EvqConst));
+        returnType.shallowCopy(constBool);
         break;
     case EOpNotEqual:
         newConstArray[0].setBConst(node->getConstArray() != unionArray);
-        returnType.shallowCopy(TType(EbtBool, EvqConst));
+        returnType.shallowCopy(constBool);
         break;
 
     default:
@@ -646,10 +647,10 @@ TIntermTyped* TIntermediate::fold(TIntermAggregate* aggrNode)
 
             // some arguments are scalars instead of matching vectors; simulate a smear
             int arg0comp = std::min(comp, children[0]->getAsTyped()->getType().getVectorSize() - 1);
-            int arg1comp;
+            int arg1comp = 0;
             if (children.size() > 1)
                 arg1comp = std::min(comp, children[1]->getAsTyped()->getType().getVectorSize() - 1);
-            int arg2comp;
+            int arg2comp = 0;
             if (children.size() > 2)
                 arg2comp = std::min(comp, children[2]->getAsTyped()->getType().getVectorSize() - 1);
 
@@ -767,7 +768,7 @@ TIntermTyped* TIntermediate::fold(TIntermAggregate* aggrNode)
             }
             break;
         case EOpReflect:
-            // I – 2 * dot(N, I) * N:  Arguments are (I, N).
+            // I - 2 * dot(N, I) * N:  Arguments are (I, N).
             dot = childConstUnions[0].dot(childConstUnions[1]);
             dot *= 2.0;
             for (int comp = 0; comp < numComps; ++comp)
@@ -853,7 +854,7 @@ TIntermTyped* TIntermediate::foldConstructor(TIntermAggregate* aggrNode)
 // dereference.  Can handle any thing except a multi-character swizzle, though
 // all swizzles may go to foldSwizzle().
 //
-TIntermTyped* TIntermediate::foldDereference(TIntermTyped* node, int index, TSourceLoc loc)
+TIntermTyped* TIntermediate::foldDereference(TIntermTyped* node, int index, const TSourceLoc& loc)
 {
     TType dereferencedType(node->getType(), index);
     dereferencedType.getQualifier().storage = EvqConst;
@@ -882,7 +883,7 @@ TIntermTyped* TIntermediate::foldDereference(TIntermTyped* node, int index, TSou
 // Make a constant vector node or constant scalar node, representing a given 
 // constant vector and constant swizzle into it.
 //
-TIntermTyped* TIntermediate::foldSwizzle(TIntermTyped* node, TVectorFields& fields, TSourceLoc loc)
+TIntermTyped* TIntermediate::foldSwizzle(TIntermTyped* node, TVectorFields& fields, const TSourceLoc& loc)
 {
     const TConstUnionArray& unionArray = node->getAsConstantUnion()->getConstArray();
     TConstUnionArray constArray(fields.num);

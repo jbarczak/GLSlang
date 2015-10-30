@@ -43,6 +43,8 @@ class TConstUnion {
 public:
     POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
 
+    TConstUnion() : iConst(0), type(EbtInt) { }
+
     void setIConst(int i)
     { 
         iConst = i; 
@@ -185,8 +187,6 @@ public:
             assert(false && "Default missing");
             return false;
         }
-
-        return false;
     }
 
     bool operator<(const TConstUnion& constant) const
@@ -212,8 +212,6 @@ public:
             assert(false && "Default missing");
             return false;
         }
-
-        return false;
     }
 
     TConstUnion operator+(const TConstUnion& constant) const
@@ -402,7 +400,7 @@ private:
         unsigned int uConst; // used for uvec, scalar uints
         bool bConst;         // used for bvec, scalar bools
         double dConst;       // used for vec, dvec, mat, dmat, scalar floats and doubles
-    } ;
+    };
 
     TBasicType type;
 };
@@ -421,13 +419,13 @@ class TConstUnionArray {
 public:
     POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
 
-    TConstUnionArray() : unionArray(0) { }
+    TConstUnionArray() : unionArray(nullptr) { }
     virtual ~TConstUnionArray() { }
 
     explicit TConstUnionArray(int size)
     {
         if (size == 0)
-            unionArray = 0;
+            unionArray = nullptr;
         else
             unionArray =  new TConstUnionVector(size);
     }
@@ -475,7 +473,7 @@ public:
         return sum;
     }
 
-    bool empty() const { return unionArray == 0; }
+    bool empty() const { return unionArray == nullptr; }
 
 protected:
     typedef TVector<TConstUnion> TConstUnionVector;

@@ -149,29 +149,63 @@ namespace glslang {
 //
 void TParseContext::initializeExtensionBehavior()
 {
-    extensionBehavior[GL_OES_texture_3D]                   = EBhDisable;
-    extensionBehavior[GL_OES_standard_derivatives]         = EBhDisable;
-    extensionBehavior[GL_EXT_frag_depth]                   = EBhDisable;
-    extensionBehavior[GL_OES_EGL_image_external]           = EBhDisable;
-    extensionBehavior[GL_EXT_shader_texture_lod]           = EBhDisable;
+    extensionBehavior[E_GL_OES_texture_3D]                   = EBhDisable;
+    extensionBehavior[E_GL_OES_standard_derivatives]         = EBhDisable;
+    extensionBehavior[E_GL_EXT_frag_depth]                   = EBhDisable;
+    extensionBehavior[E_GL_OES_EGL_image_external]           = EBhDisable;
+    extensionBehavior[E_GL_EXT_shader_texture_lod]           = EBhDisable;
                                                           
-    extensionBehavior[GL_ARB_texture_rectangle]            = EBhDisable;
-    extensionBehavior[GL_3DL_array_objects]                = EBhDisable;
-    extensionBehavior[GL_ARB_shading_language_420pack]     = EBhDisable;
-    extensionBehavior[GL_ARB_texture_gather]               = EBhDisable;
-    extensionBehavior[GL_ARB_gpu_shader5]                  = EBhDisablePartial;
-    extensionBehavior[GL_ARB_separate_shader_objects]      = EBhDisable;
-    extensionBehavior[GL_ARB_tessellation_shader]          = EBhDisable;
-    extensionBehavior[GL_ARB_enhanced_layouts]             = EBhDisable;
-    extensionBehavior[GL_ARB_texture_cube_map_array]       = EBhDisable;
-    extensionBehavior[GL_ARB_shader_texture_lod]           = EBhDisable;
-    extensionBehavior[GL_ARB_explicit_attrib_location]     = EBhDisable;
-    extensionBehavior[GL_ARB_shader_image_load_store]      = EBhDisable;
-    extensionBehavior[GL_ARB_shader_atomic_counters]       = EBhDisable;
-    extensionBehavior[GL_ARB_derivative_control]           = EBhDisable;
-    extensionBehavior[GL_ARB_shader_texture_image_samples] = EBhDisable;
-    extensionBehavior[GL_ARB_viewport_array]               = EBhDisable;
-//    extensionBehavior[GL_ARB_cull_distance]                = EBhDisable;    // present for 4.5, but need extension control over block members
+    extensionBehavior[E_GL_ARB_texture_rectangle]            = EBhDisable;
+    extensionBehavior[E_GL_3DL_array_objects]                = EBhDisable;
+    extensionBehavior[E_GL_ARB_shading_language_420pack]     = EBhDisable;
+    extensionBehavior[E_GL_ARB_texture_gather]               = EBhDisable;
+    extensionBehavior[E_GL_ARB_gpu_shader5]                  = EBhDisablePartial;
+    extensionBehavior[E_GL_ARB_separate_shader_objects]      = EBhDisable;
+    extensionBehavior[E_GL_ARB_compute_shader]               = EBhDisablePartial;
+    extensionBehavior[E_GL_ARB_tessellation_shader]          = EBhDisable;
+    extensionBehavior[E_GL_ARB_enhanced_layouts]             = EBhDisable;
+    extensionBehavior[E_GL_ARB_texture_cube_map_array]       = EBhDisable;
+    extensionBehavior[E_GL_ARB_shader_texture_lod]           = EBhDisable;
+    extensionBehavior[E_GL_ARB_explicit_attrib_location]     = EBhDisable;
+    extensionBehavior[E_GL_ARB_shader_image_load_store]      = EBhDisable;
+    extensionBehavior[E_GL_ARB_shader_atomic_counters]       = EBhDisable;
+    extensionBehavior[E_GL_ARB_shader_draw_parameters]       = EBhDisable;
+    extensionBehavior[E_GL_ARB_derivative_control]           = EBhDisable;
+    extensionBehavior[E_GL_ARB_shader_texture_image_samples] = EBhDisable;
+    extensionBehavior[E_GL_ARB_viewport_array]               = EBhDisable;
+//    extensionBehavior[E_GL_ARB_cull_distance]                = EBhDisable;    // present for 4.5, but need extension control over block members
+
+    // #line and #include
+    extensionBehavior[E_GL_GOOGLE_cpp_style_line_directive]          = EBhDisable;
+    extensionBehavior[E_GL_GOOGLE_include_directive]                 = EBhDisable;
+
+    // AEP
+    extensionBehavior[E_GL_ANDROID_extension_pack_es31a]             = EBhDisable;
+    extensionBehavior[E_GL_KHR_blend_equation_advanced]              = EBhDisable;
+    extensionBehavior[E_GL_OES_sample_variables]                     = EBhDisable;
+    extensionBehavior[E_GL_OES_shader_image_atomic]                  = EBhDisable;
+    extensionBehavior[E_GL_OES_shader_multisample_interpolation]     = EBhDisable;
+    extensionBehavior[E_GL_OES_texture_storage_multisample_2d_array] = EBhDisable;
+    extensionBehavior[E_GL_EXT_geometry_shader]                      = EBhDisable;
+    extensionBehavior[E_GL_EXT_geometry_point_size]                  = EBhDisable;
+    extensionBehavior[E_GL_EXT_gpu_shader5]                          = EBhDisable;
+    extensionBehavior[E_GL_EXT_primitive_bounding_box]               = EBhDisable;
+    extensionBehavior[E_GL_EXT_shader_io_blocks]                     = EBhDisable;
+    extensionBehavior[E_GL_EXT_tessellation_shader]                  = EBhDisable;
+    extensionBehavior[E_GL_EXT_tessellation_point_size]              = EBhDisable;
+    extensionBehavior[E_GL_EXT_texture_buffer]                       = EBhDisable;
+    extensionBehavior[E_GL_EXT_texture_cube_map_array]               = EBhDisable;
+
+    // OES matching AEP
+    extensionBehavior[E_GL_OES_geometry_shader]          = EBhDisable;
+    extensionBehavior[E_GL_OES_geometry_point_size]      = EBhDisable;
+    extensionBehavior[E_GL_OES_gpu_shader5]              = EBhDisable;
+    extensionBehavior[E_GL_OES_primitive_bounding_box]   = EBhDisable;
+    extensionBehavior[E_GL_OES_shader_io_blocks]         = EBhDisable;
+    extensionBehavior[E_GL_OES_tessellation_shader]      = EBhDisable;
+    extensionBehavior[E_GL_OES_tessellation_point_size]  = EBhDisable;
+    extensionBehavior[E_GL_OES_texture_buffer]           = EBhDisable;
+    extensionBehavior[E_GL_OES_texture_cube_map_array]   = EBhDisable;
 }
 
 // Get code that is not part of a shared symbol table, is specific to this shader,
@@ -187,6 +221,38 @@ const char* TParseContext::getPreamble()
             "#define GL_EXT_frag_depth 1\n"
             "#define GL_OES_EGL_image_external 1\n"
             "#define GL_EXT_shader_texture_lod 1\n"
+
+            // #line and #include
+            "#define GL_GOOGLE_cpp_style_line_directive 1\n"
+            "#define GL_GOOGLE_include_directive 1\n"
+
+            // AEP
+            "#define GL_ANDROID_extension_pack_es31a 1\n"
+            "#define GL_KHR_blend_equation_advanced 1\n"
+            "#define GL_OES_sample_variables 1\n"
+            "#define GL_OES_shader_image_atomic 1\n"
+            "#define GL_OES_shader_multisample_interpolation 1\n"
+            "#define GL_OES_texture_storage_multisample_2d_array 1\n"
+            "#define GL_EXT_geometry_shader 1\n"
+            "#define GL_EXT_geometry_point_size 1\n"
+            "#define GL_EXT_gpu_shader5 1\n"
+            "#define GL_EXT_primitive_bounding_box 1\n"
+            "#define GL_EXT_shader_io_blocks 1\n"
+            "#define GL_EXT_tessellation_shader 1\n"
+            "#define GL_EXT_tessellation_point_size 1\n"
+            "#define GL_EXT_texture_buffer 1\n"
+            "#define GL_EXT_texture_cube_map_array 1\n"
+
+            // OES matching AEP
+            "#define GL_OES_geometry_shader 1\n"
+            "#define GL_OES_geometry_point_size 1\n"
+            "#define GL_OES_gpu_shader5 1\n"
+            "#define GL_OES_primitive_bounding_box 1\n"
+            "#define GL_OES_shader_io_blocks 1\n"
+            "#define GL_OES_tessellation_shader 1\n"
+            "#define GL_OES_tessellation_point_size 1\n"
+            "#define GL_OES_texture_buffer 1\n"
+            "#define GL_OES_texture_cube_map_array 1\n"
             ;
     } else {
         return
@@ -196,6 +262,7 @@ const char* TParseContext::getPreamble()
             "#define GL_ARB_texture_gather 1\n"
             "#define GL_ARB_gpu_shader5 1\n"
             "#define GL_ARB_separate_shader_objects 1\n"
+            "#define GL_ARB_compute_shader 1\n"
             "#define GL_ARB_tessellation_shader 1\n"
             "#define GL_ARB_enhanced_layouts 1\n"
             "#define GL_ARB_texture_cube_map_array 1\n"
@@ -203,25 +270,15 @@ const char* TParseContext::getPreamble()
             "#define GL_ARB_explicit_attrib_location 1\n"
             "#define GL_ARB_shader_image_load_store 1\n"
             "#define GL_ARB_shader_atomic_counters 1\n"
+            "#define GL_ARB_shader_draw_parameters 1\n"
             "#define GL_ARB_derivative_control 1\n"
             "#define GL_ARB_shader_texture_image_samples 1\n"
             "#define GL_ARB_viewport_array 1\n"
+
+            "#define GL_GOOGLE_cpp_style_line_directive 1\n"
+            "#define GL_GOOGLE_include_directive 1\n"
 //            "#define GL_ARB_cull_distance 1\n"    // present for 4.5, but need extension control over block members
             ;
-    }
-}
-
-//
-// Map from profile enum to externally readable text name.
-//
-const char* ProfileName(EProfile profile)
-{
-    switch (profile) {
-    case ENoProfile:             return "none";        
-    case ECoreProfile:           return "core";
-    case ECompatibilityProfile:  return "compatibility";
-    case EEsProfile:             return "es";
-    default:                     return "unknown profile";
     }
 }
 
@@ -234,7 +291,7 @@ const char* ProfileName(EProfile profile)
 // Operation:  If the current profile is not one of the profileMask,
 // give an error message.
 //
-void TParseContext::requireProfile(TSourceLoc loc, int profileMask, const char* featureDesc)
+void TParseContext::requireProfile(const TSourceLoc& loc, int profileMask, const char* featureDesc)
 {
     if (! (profile & profileMask))
         error(loc, "not supported with this profile:", featureDesc, ProfileName(profile));
@@ -273,7 +330,7 @@ const char* StageName(EShLanguage stage)
 //
 
 // entry point that takes multiple extensions
-void TParseContext::profileRequires(TSourceLoc loc, int profileMask, int minVersion, int numExtensions, const char* const extensions[], const char* featureDesc)
+void TParseContext::profileRequires(const TSourceLoc& loc, int profileMask, int minVersion, int numExtensions, const char* const extensions[], const char* featureDesc)
 {
     if (profile & profileMask) {
         bool okay = false;
@@ -298,7 +355,7 @@ void TParseContext::profileRequires(TSourceLoc loc, int profileMask, int minVers
 }
 
 // entry point for the above that takes a single extension
-void TParseContext::profileRequires(TSourceLoc loc, int profileMask, int minVersion, const char* extension, const char* featureDesc)
+void TParseContext::profileRequires(const TSourceLoc& loc, int profileMask, int minVersion, const char* extension, const char* featureDesc)
 {
     profileRequires(loc, profileMask, minVersion, extension ? 1 : 0, &extension, featureDesc);
 }
@@ -310,7 +367,7 @@ void TParseContext::profileRequires(TSourceLoc loc, int profileMask, int minVers
 //
 // Operation: If the current stage is not present, give an error message.
 //
-void TParseContext::requireStage(TSourceLoc loc, EShLanguageMask languageMask, const char* featureDesc)
+void TParseContext::requireStage(const TSourceLoc& loc, EShLanguageMask languageMask, const char* featureDesc)
 {
     if (((1 << language) & languageMask) == 0)
         error(loc, "not supported in this stage:", featureDesc, StageName(language));
@@ -318,7 +375,7 @@ void TParseContext::requireStage(TSourceLoc loc, EShLanguageMask languageMask, c
 
 // If only one stage supports a feature, this can be called.  But, all supporting stages
 // must be specified with one call.
-void TParseContext::requireStage(TSourceLoc loc, EShLanguage stage, const char* featureDesc)
+void TParseContext::requireStage(const TSourceLoc& loc, EShLanguage stage, const char* featureDesc)
 {
     requireStage(loc, static_cast<EShLanguageMask>(1 << stage), featureDesc);
 }
@@ -327,13 +384,13 @@ void TParseContext::requireStage(TSourceLoc loc, EShLanguage stage, const char* 
 // Within a set of profiles, see if a feature is deprecated and give an error or warning based on whether
 // a future compatibility context is being use.
 //
-void TParseContext::checkDeprecated(TSourceLoc loc, int profileMask, int depVersion, const char* featureDesc)
+void TParseContext::checkDeprecated(const TSourceLoc& loc, int profileMask, int depVersion, const char* featureDesc)
 {
     if (profile & profileMask) {
         if (version >= depVersion) {
             if (forwardCompatible)
                 error(loc, "deprecated, may be removed in future release", featureDesc, "");
-            else if (! (messages & EShMsgSuppressWarnings))
+            else if (! suppressWarnings())
                 infoSink.info.message(EPrefixWarning, (TString(featureDesc) + " deprecated in version " +
                                                        String(depVersion) + "; may be removed in future release").c_str(), loc);
         }
@@ -344,7 +401,7 @@ void TParseContext::checkDeprecated(TSourceLoc loc, int profileMask, int depVers
 // Within a set of profiles, see if a feature has now been removed and if so, give an error.
 // The version argument is the first version no longer having the feature.
 //
-void TParseContext::requireNotRemoved(TSourceLoc loc, int profileMask, int removedVersion, const char* featureDesc)
+void TParseContext::requireNotRemoved(const TSourceLoc& loc, int profileMask, int removedVersion, const char* featureDesc)
 {
     if (profile & profileMask) {
         if (version >= removedVersion) {
@@ -356,24 +413,22 @@ void TParseContext::requireNotRemoved(TSourceLoc loc, int profileMask, int remov
     }
 }
 
-//
-// Use when there are no profile/version to check, it's just an error if one of the
-// extensions is not present.
-//
-void TParseContext::requireExtensions(TSourceLoc loc, int numExtensions, const char* const extensions[], const char* featureDesc)
+// Returns true if at least one of the extensions in the extensions parameter is requested. Otherwise, returns false.
+// Warns appropriately if the requested behavior of an extension is "warn".
+bool TParseContext::checkExtensionsRequested(const TSourceLoc& loc, int numExtensions, const char* const extensions[], const char* featureDesc)
 {
     // First, see if any of the extensions are enabled
     for (int i = 0; i < numExtensions; ++i) {
         TExtensionBehavior behavior = getExtensionBehavior(extensions[i]);
         if (behavior == EBhEnable || behavior == EBhRequire)
-            return;
+            return true;
     }
 
     // See if any extensions want to give a warning on use; give warnings for all such extensions
     bool warned = false;
     for (int i = 0; i < numExtensions; ++i) {
         TExtensionBehavior behavior = getExtensionBehavior(extensions[i]);
-        if (behavior == EBhDisable && (messages & EShMsgRelaxedErrors)) {
+        if (behavior == EBhDisable && relaxedErrors()) {
             infoSink.info.message(EPrefixWarning, "The following extension must be enabled to use this feature:", loc);
             behavior = EBhWarn;
         }
@@ -383,7 +438,17 @@ void TParseContext::requireExtensions(TSourceLoc loc, int numExtensions, const c
         }
     }
     if (warned)
-        return;
+        return true;
+    return false;
+}
+
+//
+// Use when there are no profile/version to check, it's just an error if one of the
+// extensions is not present.
+//
+void TParseContext::requireExtensions(const TSourceLoc& loc, int numExtensions, const char* const extensions[], const char* featureDesc)
+{
+    if (checkExtensionsRequested(loc, numExtensions, extensions, featureDesc)) return;
 
     // If we get this far, give errors explaining what extensions are needed
     if (numExtensions == 1)
@@ -395,34 +460,59 @@ void TParseContext::requireExtensions(TSourceLoc loc, int numExtensions, const c
     }
 }
 
+//
+// Use by preprocessor when there are no profile/version to check, it's just an error if one of the
+// extensions is not present.
+//
+void TParseContext::ppRequireExtensions(const TSourceLoc& loc, int numExtensions, const char* const extensions[], const char* featureDesc)
+{
+    if (checkExtensionsRequested(loc, numExtensions, extensions, featureDesc)) return;
+
+    // If we get this far, give errors explaining what extensions are needed
+    if (numExtensions == 1)
+        ppError(loc, "required extension not requested:", featureDesc, extensions[0]);
+    else {
+        ppError(loc, "required extension not requested:", featureDesc, "Possible extensions include:");
+        for (int i = 0; i < numExtensions; ++i)
+            infoSink.info.message(EPrefixNone, extensions[i]);
+    }
+}
+
 TExtensionBehavior TParseContext::getExtensionBehavior(const char* extension)
 {
-    TMap<TString, TExtensionBehavior>::iterator iter = extensionBehavior.find(TString(extension));
+    auto iter = extensionBehavior.find(TString(extension));
     if (iter == extensionBehavior.end())
         return EBhMissing;
     else
         return iter->second;
 }
 
+// Returns true if the given extension is set to enable, require, or warn.
+bool TParseContext::extensionTurnedOn(const char* const extension)
+{
+      switch (getExtensionBehavior(extension)) {
+      case EBhEnable:
+      case EBhRequire:
+      case EBhWarn:
+          return true;
+      default:
+          break;
+      }
+      return false;
+}
 // See if any of the extensions are set to enable, require, or warn.
 bool TParseContext::extensionsTurnedOn(int numExtensions, const char* const extensions[])
 {
     for (int i = 0; i < numExtensions; ++i) {
-        switch (getExtensionBehavior(extensions[i])) {
-        case EBhEnable:
-        case EBhRequire:
-        case EBhWarn:
-            return true;
-        }
+        if (extensionTurnedOn(extensions[i])) return true;
     }
-
     return false;
 }
 
 //
 // Change the current state of an extension's behavior.
 //
-void TParseContext::updateExtensionBehavior(const char* extension, const char* behaviorString)
+void TParseContext::updateExtensionBehavior(int line, const char* extension, const char* behaviorString)
 {
     // Translate from text string of extension's behavior to an enum.
     TExtensionBehavior behavior = EBhDisable;
@@ -434,23 +524,59 @@ void TParseContext::updateExtensionBehavior(const char* extension, const char* b
         behavior = EBhDisable;
     else if (! strcmp("warn", behaviorString))
         behavior = EBhWarn;
-    else
-        error(getCurrentLoc(), "behavior not supported", "#extension", behaviorString);
+    else {
+        error(getCurrentLoc(), "behavior not supported:", "#extension", behaviorString);
+        return;
+    }
 
+    // update the requested extension
+    updateExtensionBehavior(extension, behavior);
+
+    // see if need to propagate to implicitly modified things
+    if (strcmp(extension, "GL_ANDROID_extension_pack_es31a") == 0) {
+        // to everything in AEP
+        updateExtensionBehavior(line, "GL_KHR_blend_equation_advanced", behaviorString);
+        updateExtensionBehavior(line, "GL_OES_sample_variables", behaviorString);
+        updateExtensionBehavior(line, "GL_OES_shader_image_atomic", behaviorString);
+        updateExtensionBehavior(line, "GL_OES_shader_multisample_interpolation", behaviorString);
+        updateExtensionBehavior(line, "GL_OES_texture_storage_multisample_2d_array", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_geometry_shader", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_gpu_shader5", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_primitive_bounding_box", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_shader_io_blocks", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_tessellation_shader", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_texture_buffer", behaviorString);
+        updateExtensionBehavior(line, "GL_EXT_texture_cube_map_array", behaviorString);
+    }
+    // geometry to io_blocks
+    else if (strcmp(extension, "GL_EXT_geometry_shader") == 0)
+        updateExtensionBehavior(line, "GL_EXT_shader_io_blocks", behaviorString);
+    else if (strcmp(extension, "GL_OES_geometry_shader") == 0)
+        updateExtensionBehavior(line, "GL_OES_shader_io_blocks", behaviorString);
+    // tessellation to io_blocks
+    else if (strcmp(extension, "GL_EXT_tessellation_shader") == 0)
+        updateExtensionBehavior(line, "GL_EXT_shader_io_blocks", behaviorString);
+    else if (strcmp(extension, "GL_OES_tessellation_shader") == 0)
+        updateExtensionBehavior(line, "GL_OES_shader_io_blocks", behaviorString);
+    else if (strcmp(extension, "GL_GOOGLE_include_directive") == 0)
+        updateExtensionBehavior(line, "GL_GOOGLE_cpp_style_line_directive", behaviorString);
+}
+
+void TParseContext::updateExtensionBehavior(const char* extension, TExtensionBehavior behavior)
+{
     // Update the current behavior
-    TMap<TString, TExtensionBehavior>::iterator iter;
-    if (! strcmp(extension, "all")) {
+    if (strcmp(extension, "all") == 0) {
         // special case for the 'all' extension; apply it to every extension present
         if (behavior == EBhRequire || behavior == EBhEnable) {
             error(getCurrentLoc(), "extension 'all' cannot have 'require' or 'enable' behavior", "#extension", "");
             return;
         } else {
-            for (iter = extensionBehavior.begin(); iter != extensionBehavior.end(); ++iter)
+            for (auto iter = extensionBehavior.begin(); iter != extensionBehavior.end(); ++iter)
                 iter->second = behavior;
         }
     } else {
         // Do the update for this single extension
-        iter = extensionBehavior.find(TString(extension));
+        auto iter = extensionBehavior.find(TString(extension));
         if (iter == extensionBehavior.end()) {
             switch (behavior) {
             case EBhRequire:
@@ -479,20 +605,20 @@ void TParseContext::updateExtensionBehavior(const char* extension, const char* b
 //
 // Call for any operation needing full GLSL integer data-type support.
 //
-void TParseContext::fullIntegerCheck(TSourceLoc loc, const char* op)
+void TParseContext::fullIntegerCheck(const TSourceLoc& loc, const char* op)
 {
-    profileRequires(loc, ENoProfile, 130, 0, op); 
-    profileRequires(loc, EEsProfile, 300, 0, op);
+    profileRequires(loc, ENoProfile, 130, nullptr, op); 
+    profileRequires(loc, EEsProfile, 300, nullptr, op);
 }
 
 //
 // Call for any operation needing GLSL double data-type support.
 //
-void TParseContext::doubleCheck(TSourceLoc loc, const char* op)
+void TParseContext::doubleCheck(const TSourceLoc& loc, const char* op)
 {
     requireProfile(loc, ECoreProfile | ECompatibilityProfile, op);
-    profileRequires(loc, ECoreProfile, 400, 0, op);
-    profileRequires(loc, ECompatibilityProfile, 400, 0, op);
+    profileRequires(loc, ECoreProfile, 400, nullptr, op);
+    profileRequires(loc, ECompatibilityProfile, 400, nullptr, op);
 }
 
 } // end namespace glslang
