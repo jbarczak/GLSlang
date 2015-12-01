@@ -88,7 +88,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>glslang;glslang\MachineIndependent;glslang\OSDependent\Windows;OGLCompilersDLL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_HAS_ITERATOR_DEBUGGING=0;_ALLOW_RUNTIME_LIBRARY_MISMATCH;_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH;_ALLOW_MSC_VER_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeaderOutputFile>
@@ -137,7 +137,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>glslang;glslang\MachineIndependent;glslang\OSDependent\Windows;OGLCompilersDLL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_HAS_ITERATOR_DEBUGGING=0;_ALLOW_RUNTIME_LIBRARY_MISMATCH;_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH;_ALLOW_MSC_VER_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeaderOutputFile>
@@ -190,7 +190,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>glslang;glslang\MachineIndependent;glslang\OSDependent\Windows;OGLCompilersDLL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32;_CONSOLE;_USRDLL;TEST_EXPORTS;GENERIC_COMPILER;_HAS_ITERATOR_DEBUGGING=0;_ALLOW_RUNTIME_LIBRARY_MISMATCH;_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH;_ALLOW_MSC_VER_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;WIN32;_CONSOLE;_USRDLL;TEST_EXPORTS;GENERIC_COMPILER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -245,7 +245,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>glslang;glslang\MachineIndependent;glslang\OSDependent\Windows;OGLCompilersDLL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32;_CONSOLE;_USRDLL;TEST_EXPORTS;GENERIC_COMPILER;_HAS_ITERATOR_DEBUGGING=0;_ALLOW_RUNTIME_LIBRARY_MISMATCH;_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH;_ALLOW_MSC_VER_MISMATCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;WIN32;_CONSOLE;_USRDLL;TEST_EXPORTS;GENERIC_COMPILER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -329,7 +329,12 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClCompile Include="glslang\MachineIndependent\SymbolTable.cpp" />
     <ClCompile Include="glslang\MachineIndependent\intermOut.cpp" />
     <ClCompile Include="glslang\MachineIndependent\parseConst.cpp" />
-    <ClCompile Include="glslang\OSDependent\Windows\main.cpp" />
+    <ClCompile Include="glslang\OSDependent\Windows\main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="glslang\OSDependent\Windows\ossource.cpp" />
     <ClCompile Include="glslang\OSDependent\Linux\ossource.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -348,7 +353,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClInclude Include="glslang\MachineIndependent\ParseHelper.h" />
     <ClInclude Include="glslang\MachineIndependent\preprocessor\PpContext.h" />
     <ClInclude Include="glslang\MachineIndependent\preprocessor\PpTokens.h" />
-	<ClInclude Include="glslang\MachineIndependent\reflection.h" />
+    <ClInclude Include="glslang\MachineIndependent\reflection.h" />
     <ClInclude Include="glslang\MachineIndependent\RemoveTree.h" />
     <ClInclude Include="glslang\MachineIndependent\localintermediate.h" />
     <ClInclude Include="glslang\Include\BaseTypes.h" />
