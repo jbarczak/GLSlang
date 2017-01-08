@@ -72,6 +72,9 @@
     <ClCompile Include="hlsl\hlslTokenStream.cpp">
       <Filter>hlsl</Filter>
     </ClCompile>
+    <ClCompile Include="glslang\MachineIndependent\iomapper.cpp" />
+    <ClCompile Include="glslang\MachineIndependent\ParseContextBase.cpp" />
+    <ClCompile Include="glslang\MachineIndependent\propagateNoContraction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="glslang\MachineIndependent\glslang_tab.cpp.h" />
@@ -172,6 +175,12 @@
     <ClInclude Include="hlsl\hlslTokenStream.h">
       <Filter>hlsl</Filter>
     </ClInclude>
+    <ClInclude Include="glslang\MachineIndependent\gl_types.h" />
+    <ClInclude Include="glslang\MachineIndependent\iomapper.h" />
+    <ClInclude Include="glslang\MachineIndependent\LiveTraverser.h" />
+    <ClInclude Include="glslang\MachineIndependent\parseVersions.h" />
+    <ClInclude Include="glslang\MachineIndependent\propagateNoContraction.h" />
+    <ClInclude Include="glslang\MachineIndependent\unistd.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="glslang\MachineIndependent\glslang.y" />

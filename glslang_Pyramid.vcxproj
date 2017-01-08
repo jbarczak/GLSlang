@@ -307,8 +307,10 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     </ClCompile>
     <ClCompile Include="glslang\MachineIndependent\InfoSink.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Initialize.cpp" />
+    <ClCompile Include="glslang\MachineIndependent\iomapper.cpp" />
     <ClCompile Include="glslang\MachineIndependent\limits.cpp" />
     <ClCompile Include="glslang\MachineIndependent\linkValidate.cpp" />
+    <ClCompile Include="glslang\MachineIndependent\ParseContextBase.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\Pp.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpAtom.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpMemory.cpp" />
@@ -316,6 +318,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpContext.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpSymbols.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpTokens.cpp" />
+    <ClCompile Include="glslang\MachineIndependent\propagateNoContraction.cpp" />
     <ClCompile Include="glslang\MachineIndependent\reflection.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Scan.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Versions.cpp" />
@@ -363,10 +366,15 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="glslang\MachineIndependent\glslang_tab.cpp.h" />
+    <ClInclude Include="glslang\MachineIndependent\gl_types.h" />
     <ClInclude Include="glslang\MachineIndependent\Initialize.h" />
+    <ClInclude Include="glslang\MachineIndependent\iomapper.h" />
+    <ClInclude Include="glslang\MachineIndependent\LiveTraverser.h" />
     <ClInclude Include="glslang\MachineIndependent\ParseHelper.h" />
+    <ClInclude Include="glslang\MachineIndependent\parseVersions.h" />
     <ClInclude Include="glslang\MachineIndependent\preprocessor\PpContext.h" />
     <ClInclude Include="glslang\MachineIndependent\preprocessor\PpTokens.h" />
+    <ClInclude Include="glslang\MachineIndependent\propagateNoContraction.h" />
     <ClInclude Include="glslang\MachineIndependent\reflection.h" />
     <ClInclude Include="glslang\MachineIndependent\RemoveTree.h" />
     <ClInclude Include="glslang\MachineIndependent\localintermediate.h" />
@@ -376,6 +384,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClInclude Include="glslang\Include\InfoSink.h" />
     <ClInclude Include="glslang\MachineIndependent\Scan.h" />
     <ClInclude Include="glslang\MachineIndependent\ScanContext.h" />
+    <ClInclude Include="glslang\MachineIndependent\unistd.h" />
     <ClInclude Include="glslang\MachineIndependent\Versions.h" />
     <ClInclude Include="hlsl\hlslAttributes.h" />
     <ClInclude Include="hlsl\hlslGrammar.h" />
