@@ -1,4 +1,4 @@
-#version 130
+#version 140
 
 uniform sampler1D       texSampler1D;
 uniform sampler2D       texSampler2D;
@@ -7,12 +7,12 @@ uniform samplerCube	    texSamplerCube;
 uniform sampler1DShadow shadowSampler1D;
 uniform sampler2DShadow shadowSampler2D;
 
-uniform float blend;
-uniform vec2 scale;
-uniform vec4 u;
+varying float blend;
+varying vec2 scale;
+varying vec4 u;
 
-varying vec2 t;
-varying vec2 coords2D;
+in  vec2 t;
+in  vec2 coords2D;
 
 void main()
 {  
@@ -25,34 +25,34 @@ void main()
     vec4  coords4D   = vec4(1.789, 2.718, 3.453, 2.0);
     vec4  color      = vec4(0.0, 0.0, 0.0, 0.0);
 
-    color += texture1D    (texSampler1D, coords1D);
-    color += texture1D    (texSampler1D, coords1D, bias);
-    color += texture1DProj(texSampler1D, coords2D);
-    color += texture1DProj(texSampler1D, coords4D);
-    color += texture1DProj(texSampler1D, coords2D, bias);
-    color += texture1DProj(texSampler1D, coords4D, bias);
+    color += texture    (texSampler1D, coords1D);
+    color += texture    (texSampler1D, coords1D, bias);
+    color += textureProj(texSampler1D, coords2D);
+    color += textureProj(texSampler1D, coords4D);
+    color += textureProj(texSampler1D, coords2D, bias);
+    color += textureProj(texSampler1D, coords4D, bias);
     
-    color += texture2D        (texSampler2D, coords2D);
-    color += texture2D        (texSampler2D, coords2D, bias);
-    color += texture2DProj    (texSampler2D, coords3D);
-    color += texture2DProj    (texSampler2D, coords4D, bias);
+    color += texture        (texSampler2D, coords2D);
+    color += texture        (texSampler2D, coords2D, bias);
+    color += textureProj    (texSampler2D, coords3D);
+    color += textureProj    (texSampler2D, coords4D, bias);
 
-    color += texture3D        (texSampler3D, coords3D);
-    color += texture3D        (texSampler3D, coords3D, bias);
-    color += texture3DProj    (texSampler3D, coords4D);
-    color += texture3DProj    (texSampler3D, coords4D, bias);
+    color += texture        (texSampler3D, coords3D);
+    color += texture        (texSampler3D, coords3D, bias);
+    color += textureProj    (texSampler3D, coords4D);
+    color += textureProj    (texSampler3D, coords4D, bias);
 
-    color += textureCube    (texSamplerCube, coords3D);
-    color += textureCube    (texSamplerCube, coords3D, bias);
+    color += texture    (texSamplerCube, coords3D);
+    color += texture    (texSamplerCube, coords3D, bias);
     
-    color += shadow1D       (shadowSampler1D, coords3D);
-    color += shadow1D       (shadowSampler1D, coords3D, bias);
-    color += shadow2D       (shadowSampler2D, coords3D);
-    color += shadow2D       (shadowSampler2D, coords3D, bias);
-    color += shadow1DProj   (shadowSampler1D, coords4D);
-    color += shadow1DProj   (shadowSampler1D, coords4D, bias);
-    color += shadow2DProj   (shadowSampler2D, coords4D);
-    color += shadow2DProj   (shadowSampler2D, coords4D, bias);
+    color += texture       (shadowSampler1D, coords3D);
+    color += texture       (shadowSampler1D, coords3D, bias);
+    color += texture       (shadowSampler2D, coords3D);
+    color += texture       (shadowSampler2D, coords3D, bias);
+    color += textureProj   (shadowSampler1D, coords4D);
+    color += textureProj   (shadowSampler1D, coords4D, bias);
+    color += textureProj   (shadowSampler2D, coords4D);
+    color += textureProj   (shadowSampler2D, coords4D, bias);
 
     ivec2 iCoords2D = ivec2(0, 5);
     int iLod = 1;

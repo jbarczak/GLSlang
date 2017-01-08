@@ -1,11 +1,11 @@
 //
-//Copyright (C) 2014-2015 LunarG, Inc.
+// Copyright (C) 2014-2015 LunarG, Inc.
 //
-//All rights reserved.
+// All rights reserved.
 //
-//Redistribution and use in source and binary forms, with or without
-//modification, are permitted provided that the following conditions
-//are met:
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
 //
 //    Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
@@ -19,25 +19,21 @@
 //    contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-//"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-//LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-//FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-//COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-//INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-//LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-//ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-//POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
 //
-// Author: John Kessenich, LunarG
-//
-
-//
-// 1) Programatically fill in instruction/operand information.
+// 1) Programmatically fill in instruction/operand information.
 //    This can be used for disassembly, printing documentation, etc.
 //
 // 2) Print documentation from this parameterization.
@@ -45,9 +41,21 @@
 
 #include "doc.h"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <algorithm>
+
+namespace spv {
+    extern "C" {
+        // Include C-based headers that don't have a namespace
+#ifdef AMD_EXTENSIONS
+        #include "GLSL.ext.AMD.h"
+#endif
+#ifdef NV_EXTENSIONS
+        #include "GLSL.ext.NV.h"
+#endif
+    }
+}
 
 namespace spv {
 
@@ -64,7 +72,7 @@ namespace spv {
 //    (for non-sparse mask enums, this is the number of enumurants)
 //
 
-const int SourceLanguageCeiling = 4;
+const int SourceLanguageCeiling = 6; // HLSL todo: need official enumerant
 
 const char* SourceString(int source)
 {
@@ -72,7 +80,9 @@ const char* SourceString(int source)
     case 0:  return "Unknown";
     case 1:  return "ESSL";
     case 2:  return "GLSL";
-    case 3:  return "OpenCL";
+    case 3:  return "OpenCL_C";
+    case 4:  return "OpenCL_CPP";
+    case 5:  return "HLSL";
 
     case SourceLanguageCeiling:
     default: return "Bad";
@@ -125,7 +135,7 @@ const char* MemoryString(int mem)
     }
 }
 
-const int ExecutionModeCeiling = 32;
+const int ExecutionModeCeiling = 33;
 
 const char* ExecutionModeString(int mode)
 {
@@ -143,7 +153,7 @@ const char* ExecutionModeString(int mode)
     case 10: return "PointMode";
     case 11: return "Xfb";
     case 12: return "DepthReplacing";
-    case 13: return "DepthAny";
+    case 13: return "Bad";
     case 14: return "DepthGreater";
     case 15: return "DepthLess";
     case 16: return "DepthUnchanged";
@@ -152,16 +162,17 @@ const char* ExecutionModeString(int mode)
     case 19: return "InputPoints";
     case 20: return "InputLines";
     case 21: return "InputLinesAdjacency";
-    case 22: return "InputTriangles";
+    case 22: return "Triangles";
     case 23: return "InputTrianglesAdjacency";
-    case 24: return "InputQuads";
-    case 25: return "InputIsolines";
+    case 24: return "Quads";
+    case 25: return "Isolines";
     case 26: return "OutputVertices";
     case 27: return "OutputPoints";
     case 28: return "OutputLineStrip";
     case 29: return "OutputTriangleStrip";
     case 30: return "VecTypeHint";
     case 31: return "ContractionOff";
+    case 32: return "Bad";
 
     case ExecutionModeCeiling:
     default: return "Bad";
@@ -177,12 +188,12 @@ const char* StorageClassString(int StorageClass)
     case 1:  return "Input";
     case 2:  return "Uniform";
     case 3:  return "Output";
-    case 4:  return "WorkgroupLocal";
-    case 5:  return "WorkgroupGlobal";
-    case 6:  return "PrivateGlobal";
+    case 4:  return "Workgroup";
+    case 5:  return "CrossWorkgroup";
+    case 6:  return "Private";
     case 7:  return "Function";
     case 8:  return "Generic";
-    case 9:  return "Bad";
+    case 9:  return "PushConstant";
     case 10: return "AtomicCounter";
     case 11: return "Image";
 
@@ -191,7 +202,7 @@ const char* StorageClassString(int StorageClass)
     }
 }
 
-const int DecorationCeiling = 42;
+const int DecorationCeiling = 45;
 
 const char* DecorationString(int decoration)
 {
@@ -208,8 +219,8 @@ const char* DecorationString(int decoration)
     case 9:  return "GLSLPacked";
     case 10: return "CPacked";
     case 11: return "BuiltIn";
-    case 12: return "Smooth";
-    case 13: return "Noperspective";
+    case 12: return "Bad";
+    case 13: return "NoPerspective";
     case 14: return "Flat";
     case 15: return "Patch";
     case 16: return "Centroid";
@@ -220,10 +231,10 @@ const char* DecorationString(int decoration)
     case 21: return "Volatile";
     case 22: return "Constant";
     case 23: return "Coherent";
-    case 24: return "Nonwritable";
-    case 25: return "Nonreadable";
+    case 24: return "NonWritable";
+    case 25: return "NonReadable";
     case 26: return "Uniform";
-    case 27: return "NoStaticUse";
+    case 27: return "Bad";
     case 28: return "SaturatedConversion";
     case 29: return "Stream";
     case 30: return "Location";
@@ -238,13 +249,24 @@ const char* DecorationString(int decoration)
     case 39: return "FP Rounding Mode";
     case 40: return "FP Fast Math Mode";
     case 41: return "Linkage Attributes";
+    case 42: return "NoContraction";
+    case 43: return "InputAttachmentIndex";
+    case 44: return "Alignment";
 
     case DecorationCeiling:
     default:  return "Bad";
+
+#ifdef AMD_EXTENSIONS
+    case 4999: return "ExplicitInterpAMD";
+#endif
+#ifdef NV_EXTENSIONS
+    case 5248: return "OverrideCoverageNV";
+    case 5250: return "PassthroughNV";
+#endif
     }
 }
 
-const int BuiltInCeiling = 42;
+const int BuiltInCeiling = 44;
 
 const char* BuiltInString(int builtIn)
 {
@@ -270,7 +292,7 @@ const char* BuiltInString(int builtIn)
     case 18: return "SampleId";
     case 19: return "SamplePosition";
     case 20: return "SampleMask";
-    case 21: return "FragColor";
+    case 21: return "Bad";
     case 22: return "FragDepth";
     case 23: return "HelperInvocation";
     case 24: return "NumWorkgroups";
@@ -284,20 +306,42 @@ const char* BuiltInString(int builtIn)
     case 32: return "EnqueuedWorkgroupSize";
     case 33: return "GlobalOffset";
     case 34: return "GlobalLinearId";
-    case 35: return "WorkgroupLinearId";
+    case 35: return "Bad";
     case 36: return "SubgroupSize";
     case 37: return "SubgroupMaxSize";
     case 38: return "NumSubgroups";
     case 39: return "NumEnqueuedSubgroups";
     case 40: return "SubgroupId";
     case 41: return "SubgroupLocalInvocationId";
+    case 42: return "VertexIndex";                 // TBD: put next to VertexId?
+    case 43: return "InstanceIndex";               // TBD: put next to InstanceId?
 
     case BuiltInCeiling:
     default: return "Bad";
+
+    case 4416: return "SubgroupEqMaskKHR";
+    case 4417: return "SubgroupGeMaskKHR";
+    case 4418: return "SubgroupGtMaskKHR";
+    case 4419: return "SubgroupLeMaskKHR";
+    case 4420: return "SubgroupLtMaskKHR";
+
+    case 4424: return "BaseVertex";
+    case 4425: return "BaseInstance";
+    case 4426: return "DrawIndex";
+
+#ifdef AMD_EXTENSIONS
+    case 4992: return "BaryCoordNoPerspAMD";
+    case 4993: return "BaryCoordNoPerspCentroidAMD";
+    case 4994: return "BaryCoordNoPerspSampleAMD";
+    case 4995: return "BaryCoordSmoothAMD";
+    case 4996: return "BaryCoordSmoothCentroidAMD";
+    case 4997: return "BaryCoordSmoothSampleAMD";
+    case 4998: return "BaryCoordPullModelAMD";
+#endif
     }
 }
 
-const int DimensionCeiling = 6;
+const int DimensionCeiling = 7;
 
 const char* DimensionString(int dim)
 {
@@ -308,6 +352,7 @@ const char* DimensionString(int dim)
     case 3:  return "Cube";
     case 4:  return "Rect";
     case 5:  return "Buffer";
+    case 6:  return "SubpassData";
 
     case DimensionCeiling:
     default: return "Bad";
@@ -438,7 +483,7 @@ const char* ImageChannelOrderString(int format)
     }
 }
 
-const int ImageChannelDataTypeCeiling = 16;
+const int ImageChannelDataTypeCeiling = 17;
 
 const char* ImageChannelDataTypeString(int type)
 {
@@ -460,6 +505,7 @@ const char* ImageChannelDataTypeString(int type)
     case 13: return "HalfFloat";
     case 14: return "Float";
     case 15: return "UnormInt24";
+    case 16: return "UnormInt101010_2";
 
     case ImageChannelDataTypeCeiling:
     default:
@@ -467,7 +513,7 @@ const char* ImageChannelDataTypeString(int type)
     }
 }
 
-const int ImageOperandsCeiling = 7;
+const int ImageOperandsCeiling = 8;
 
 const char* ImageOperandsString(int format)
 {
@@ -479,6 +525,7 @@ const char* ImageOperandsString(int format)
     case 4: return "Offset";
     case 5: return "ConstOffsets";
     case 6: return "Sample";
+    case 7: return "MinLod";
 
     case ImageOperandsCeiling:
     default:
@@ -604,35 +651,38 @@ const char* FunctionControlString(int cont)
     }
 }
 
-const int MemorySemanticsCeiling = 10;
+const int MemorySemanticsCeiling = 12;
 
 const char* MemorySemanticsString(int mem)
 {
+    // Note: No bits set (None) means "Relaxed"
     switch (mem) {
-    case 0: return "Relaxed";
-    case 1: return "SequentiallyConsistent";
-    case 2: return "Acquire";
-    case 3: return "Release";
-
-    case 4: return "UniformMemory";
-    case 5: return "SubgroupMemory";
-    case 6: return "WorkgroupLocalMemory";
-    case 7: return "WorkgroupGlobalMemory";
-    case 8: return "AtomicCounterMemory";
-    case 9: return "ImageMemory";
+    case 0: return "Bad"; // Note: this is a placeholder for 'Consume'
+    case 1: return "Acquire";
+    case 2: return "Release";
+    case 3: return "AcquireRelease";
+    case 4: return "SequentiallyConsistent";
+    case 5: return "Bad"; // Note: reserved for future expansion
+    case 6: return "UniformMemory";
+    case 7: return "SubgroupMemory";
+    case 8: return "WorkgroupMemory";
+    case 9: return "CrossWorkgroupMemory";
+    case 10: return "AtomicCounterMemory";
+    case 11: return "ImageMemory";
 
     case MemorySemanticsCeiling:
     default:     return "Bad";
     }
 }
 
-const int MemoryAccessCeiling = 2;
+const int MemoryAccessCeiling = 3;
 
 const char* MemoryAccessString(int mem)
 {
     switch (mem) {
     case 0:  return "Volatile";
     case 1:  return "Aligned";
+    case 2:  return "Nontemporal";
 
     case MemoryAccessCeiling:
     default: return "Bad";
@@ -699,7 +749,7 @@ const char* KernelProfilingInfoString(int info)
     }
 }
 
-const int CapabilityCeiling = 36;
+const int CapabilityCeiling = 58;
 
 const char* CapabilityString(int info)
 {
@@ -721,7 +771,7 @@ const char* CapabilityString(int info)
     case 13: return "ImageBasic";
     case 14: return "ImageReadWrite";
     case 15: return "ImageMipmap";
-    case 16: return "ImageSRGBWrite";
+    case 16: return "Bad";
     case 17: return "Pipes";
     case 18: return "Groups";
     case 19: return "DeviceEnqueue";
@@ -731,7 +781,7 @@ const char* CapabilityString(int info)
     case 23: return "TessellationPointSize";
     case 24: return "GeometryPointSize";
     case 25: return "ImageGatherExtended"; 
-    case 26: return "StorageImageExtendedFormats";
+    case 26: return "Bad";
     case 27: return "StorageImageMultisample";
     case 28: return "UniformBufferArrayDynamicIndexing";
     case 29: return "SampledImageArrayDynamicIndexing";
@@ -741,9 +791,39 @@ const char* CapabilityString(int info)
     case 33: return "CullDistance";
     case 34: return "ImageCubeArray";
     case 35: return "SampleRateShading";
+    case 36: return "ImageRect";
+    case 37: return "SampledRect";
+    case 38: return "GenericPointer";
+    case 39: return "Int8";
+    case 40: return "InputAttachment";
+    case 41: return "SparseResidency";
+    case 42: return "MinLod";
+    case 43: return "Sampled1D";
+    case 44: return "Image1D";
+    case 45: return "SampledCubeArray";
+    case 46: return "SampledBuffer";
+    case 47: return "ImageBuffer";
+    case 48: return "ImageMSArray";
+    case 49: return "StorageImageExtendedFormats";
+    case 50: return "ImageQuery";
+    case 51: return "DerivativeControl";
+    case 52: return "InterpolationFunction";
+    case 53: return "TransformFeedback";
+    case 54: return "GeometryStreams";
+    case 55: return "StorageImageReadWithoutFormat";
+    case 56: return "StorageImageWriteWithoutFormat";
+    case 57: return "MultiViewport";
 
     case CapabilityCeiling:
     default: return "Bad";
+
+    case 4423: return "SubgroupBallotKHR";
+    case 4427: return "DrawParameters";
+
+#ifdef NV_EXTENSIONS
+    case 5251: return "GeometryShaderPassthroughNV";
+#endif
+
     }
 }
 
@@ -752,7 +832,7 @@ const char* OpcodeString(int op)
     switch (op) {
     case 0:   return "OpNop";
     case 1:   return "OpUndef";
-    case 2:   return "Bad";
+    case 2:   return "OpSourceContinued";
     case 3:   return "OpSource";
     case 4:   return "OpSourceExtension";
     case 5:   return "OpName";
@@ -789,7 +869,7 @@ const char* OpcodeString(int op)
     case 36:  return "OpTypeReserveId";
     case 37:  return "OpTypeQueue";
     case 38:  return "OpTypePipe";
-    case 39:  return "Bad";
+    case 39:  return "OpTypeForwardPointer";
     case 40:  return "Bad";
     case 41:  return "OpConstantTrue";
     case 42:  return "OpConstantFalse";
@@ -820,7 +900,7 @@ const char* OpcodeString(int op)
     case 67:  return "OpPtrAccessChain";
     case 68:  return "OpArrayLength";
     case 69:  return "OpGenericPtrMemSemantics";
-    case 70:  return "Bad";
+    case 70:  return "OpInBoundsPtrAccessChain";
     case 71:  return "OpDecorate";
     case 72:  return "OpMemberDecorate";
     case 73:  return "OpDecorationGroup";
@@ -850,7 +930,7 @@ const char* OpcodeString(int op)
     case 97:  return "OpImageDrefGather";
     case 98:  return "OpImageRead";
     case 99:  return "OpImageWrite";
-    case 100: return "OpImageQueryDim";
+    case 100: return "OpImage";
     case 101: return "OpImageQueryFormat";
     case 102: return "OpImageQueryOrder";
     case 103: return "OpImageQuerySizeLod";
@@ -901,8 +981,8 @@ const char* OpcodeString(int op)
     case 148: return "OpDot";
     case 149: return "OpIAddCarry";
     case 150: return "OpISubBorrow";
-    case 151: return "OpIMulExtended";
-    case 152: return "Bad";
+    case 151: return "OpUMulExtended";
+    case 152: return "OpSMulExtended";
     case 153: return "Bad";
     case 154: return "OpAny";
     case 155: return "OpAll";
@@ -1009,8 +1089,8 @@ const char* OpcodeString(int op)
     case 256: return "OpLifetimeStart";
     case 257: return "OpLifetimeStop";
     case 258: return "Bad";
-    case 259: return "OpAsyncGroupCopy";
-    case 260: return "OpWaitGroupEvents";
+    case 259: return "OpGroupAsyncCopy";
+    case 260: return "OpGroupWaitEvents";
     case 261: return "OpGroupAll";
     case 262: return "OpGroupAny";
     case 263: return "OpGroupBroadcast";
@@ -1055,16 +1135,47 @@ const char* OpcodeString(int op)
     case 302: return "OpCaptureEventProfilingInfo";
     case 303: return "OpGetDefaultQueue";
     case 304: return "OpBuildNDRange";
+    case 305: return "OpImageSparseSampleImplicitLod";
+    case 306: return "OpImageSparseSampleExplicitLod";
+    case 307: return "OpImageSparseSampleDrefImplicitLod";
+    case 308: return "OpImageSparseSampleDrefExplicitLod";
+    case 309: return "OpImageSparseSampleProjImplicitLod";
+    case 310: return "OpImageSparseSampleProjExplicitLod";
+    case 311: return "OpImageSparseSampleProjDrefImplicitLod";
+    case 312: return "OpImageSparseSampleProjDrefExplicitLod";
+    case 313: return "OpImageSparseFetch";
+    case 314: return "OpImageSparseGather";
+    case 315: return "OpImageSparseDrefGather";
+    case 316: return "OpImageSparseTexelsResident";
+    case 317: return "OpNoLine";
+    case 318: return "OpAtomicFlagTestAndSet";
+    case 319: return "OpAtomicFlagClear";
+    case 320: return "OpImageSparseRead";
 
     case OpcodeCeiling:
     default:
         return "Bad";
+
+    case 4421: return "OpSubgroupBallotKHR";
+    case 4422: return "OpSubgroupFirstInvocationKHR";
+    case 4432: return "OpSubgroupReadInvocationKHR";
+
+#ifdef AMD_EXTENSIONS
+    case 5000: return "OpGroupIAddNonUniformAMD";
+    case 5001: return "OpGroupFAddNonUniformAMD";
+    case 5002: return "OpGroupFMinNonUniformAMD";
+    case 5003: return "OpGroupUMinNonUniformAMD";
+    case 5004: return "OpGroupSMinNonUniformAMD";
+    case 5005: return "OpGroupFMaxNonUniformAMD";
+    case 5006: return "OpGroupUMaxNonUniformAMD";
+    case 5007: return "OpGroupSMaxNonUniformAMD";
+#endif
     }
 }
 
 // The set of objects that hold all the instruction/operand
 // parameterization information.
-InstructionParameters InstructionDesc[OpcodeCeiling];
+InstructionParameters InstructionDesc[OpCodeMask + 1];
 OperandParameters ExecutionModeOperands[ExecutionModeCeiling];
 OperandParameters DecorationOperands[DecorationCeiling];
 
@@ -1113,6 +1224,7 @@ void Parameterize()
 
     InstructionDesc[OpNop].setResultAndType(false, false);
     InstructionDesc[OpSource].setResultAndType(false, false);
+    InstructionDesc[OpSourceContinued].setResultAndType(false, false);
     InstructionDesc[OpSourceExtension].setResultAndType(false, false);
     InstructionDesc[OpExtension].setResultAndType(false, false);
     InstructionDesc[OpExtInstImport].setResultAndType(true, false);
@@ -1134,6 +1246,7 @@ void Parameterize()
     InstructionDesc[OpTypeStruct].setResultAndType(true, false);
     InstructionDesc[OpTypeOpaque].setResultAndType(true, false);
     InstructionDesc[OpTypePointer].setResultAndType(true, false);
+    InstructionDesc[OpTypeForwardPointer].setResultAndType(false, false);
     InstructionDesc[OpTypeFunction].setResultAndType(true, false);
     InstructionDesc[OpTypeEvent].setResultAndType(true, false);
     InstructionDesc[OpTypeDeviceEvent].setResultAndType(true, false);
@@ -1152,6 +1265,7 @@ void Parameterize()
     InstructionDesc[OpMemberName].setResultAndType(false, false);
     InstructionDesc[OpString].setResultAndType(true, false);
     InstructionDesc[OpLine].setResultAndType(false, false);
+    InstructionDesc[OpNoLine].setResultAndType(false, false);
     InstructionDesc[OpCopyMemory].setResultAndType(false, false);
     InstructionDesc[OpCopyMemorySized].setResultAndType(false, false);
     InstructionDesc[OpEmitVertex].setResultAndType(false, false);
@@ -1181,11 +1295,12 @@ void Parameterize()
     InstructionDesc[OpSetUserEventStatus].setResultAndType(false, false);
     InstructionDesc[OpRetainEvent].setResultAndType(false, false);
     InstructionDesc[OpReleaseEvent].setResultAndType(false, false);
-    InstructionDesc[OpWaitGroupEvents].setResultAndType(false, false);
+    InstructionDesc[OpGroupWaitEvents].setResultAndType(false, false);
+    InstructionDesc[OpAtomicFlagClear].setResultAndType(false, false);
 
     // Specific additional context-dependent operands
 
-    ExecutionModeOperands[ExecutionModeInvocations].push(OperandLiteralNumber, "Number of <<Invocation,invocations>>");
+    ExecutionModeOperands[ExecutionModeInvocations].push(OperandLiteralNumber, "'Number of <<Invocation,invocations>>'");
 
     ExecutionModeOperands[ExecutionModeLocalSize].push(OperandLiteralNumber, "'x size'");
     ExecutionModeOperands[ExecutionModeLocalSize].push(OperandLiteralNumber, "'y size'");
@@ -1198,24 +1313,26 @@ void Parameterize()
     ExecutionModeOperands[ExecutionModeOutputVertices].push(OperandLiteralNumber, "'Vertex count'");
     ExecutionModeOperands[ExecutionModeVecTypeHint].push(OperandLiteralNumber, "'Vector type'");
 
-    DecorationOperands[DecorationStream].push(OperandLiteralNumber, "Stream number");
-    DecorationOperands[DecorationLocation].push(OperandLiteralNumber, "Location");
-    DecorationOperands[DecorationComponent].push(OperandLiteralNumber, "Component within a vector");
-    DecorationOperands[DecorationIndex].push(OperandLiteralNumber, "Index");
-    DecorationOperands[DecorationBinding].push(OperandLiteralNumber, "Binding point");
-    DecorationOperands[DecorationDescriptorSet].push(OperandLiteralNumber, "Descriptor set");
-    DecorationOperands[DecorationOffset].push(OperandLiteralNumber, "Byte offset");
-    DecorationOperands[DecorationXfbBuffer].push(OperandLiteralNumber, "XFB buffer number");
-    DecorationOperands[DecorationXfbStride].push(OperandLiteralNumber, "XFB stride");
-    DecorationOperands[DecorationArrayStride].push(OperandLiteralNumber, "Array stride");
-    DecorationOperands[DecorationMatrixStride].push(OperandLiteralNumber, "Matrix stride");
+    DecorationOperands[DecorationStream].push(OperandLiteralNumber, "'Stream Number'");
+    DecorationOperands[DecorationLocation].push(OperandLiteralNumber, "'Location'");
+    DecorationOperands[DecorationComponent].push(OperandLiteralNumber, "'Component'");
+    DecorationOperands[DecorationIndex].push(OperandLiteralNumber, "'Index'");
+    DecorationOperands[DecorationBinding].push(OperandLiteralNumber, "'Binding Point'");
+    DecorationOperands[DecorationDescriptorSet].push(OperandLiteralNumber, "'Descriptor Set'");
+    DecorationOperands[DecorationOffset].push(OperandLiteralNumber, "'Byte Offset'");
+    DecorationOperands[DecorationXfbBuffer].push(OperandLiteralNumber, "'XFB Buffer Number'");
+    DecorationOperands[DecorationXfbStride].push(OperandLiteralNumber, "'XFB Stride'");
+    DecorationOperands[DecorationArrayStride].push(OperandLiteralNumber, "'Array Stride'");
+    DecorationOperands[DecorationMatrixStride].push(OperandLiteralNumber, "'Matrix Stride'");
     DecorationOperands[DecorationBuiltIn].push(OperandLiteralNumber, "See <<BuiltIn,*BuiltIn*>>");
-    DecorationOperands[DecorationFPRoundingMode].push(OperandFPRoundingMode, "floating-point rounding mode");
-    DecorationOperands[DecorationFPFastMathMode].push(OperandFPFastMath, "fast-math mode");
-    DecorationOperands[DecorationLinkageAttributes].push(OperandLiteralString, "name");
-    DecorationOperands[DecorationLinkageAttributes].push(OperandLinkageType, "linkage type");
-    DecorationOperands[DecorationFuncParamAttr].push(OperandFuncParamAttr, "function parameter attribute");
-    DecorationOperands[DecorationSpecId].push(OperandLiteralNumber, "Specialization Constant ID");
+    DecorationOperands[DecorationFPRoundingMode].push(OperandFPRoundingMode, "'Floating-Point Rounding Mode'");
+    DecorationOperands[DecorationFPFastMathMode].push(OperandFPFastMath, "'Fast-Math Mode'");
+    DecorationOperands[DecorationLinkageAttributes].push(OperandLiteralString, "'Name'");
+    DecorationOperands[DecorationLinkageAttributes].push(OperandLinkageType, "'Linkage Type'");
+    DecorationOperands[DecorationFuncParamAttr].push(OperandFuncParamAttr, "'Function Parameter Attribute'");
+    DecorationOperands[DecorationSpecId].push(OperandLiteralNumber, "'Specialization Constant ID'");
+    DecorationOperands[DecorationInputAttachmentIndex].push(OperandLiteralNumber, "'Attachment Index'");
+    DecorationOperands[DecorationAlignment].push(OperandLiteralNumber, "'Alignment'");
 
     OperandClassParams[OperandSource].set(SourceLanguageCeiling, SourceString, 0);
     OperandClassParams[OperandExecutionModel].set(ExecutionModelCeiling, ExecutionModelString, ExecutionModelParams);
@@ -1251,12 +1368,63 @@ void Parameterize()
     OperandClassParams[OperandCapability].set(CapabilityCeiling, CapabilityString, CapabilityParams);
     OperandClassParams[OperandOpcode].set(OpcodeCeiling, OpcodeString, 0);
 
+    CapabilityParams[CapabilityShader].caps.push_back(CapabilityMatrix);
+    CapabilityParams[CapabilityGeometry].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityTessellation].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityVector16].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityFloat16Buffer].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityInt64Atomics].caps.push_back(CapabilityInt64);
+    CapabilityParams[CapabilityImageBasic].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityImageReadWrite].caps.push_back(CapabilityImageBasic);
+    CapabilityParams[CapabilityImageMipmap].caps.push_back(CapabilityImageBasic);
+    CapabilityParams[CapabilityPipes].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityDeviceEnqueue].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityLiteralSampler].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityAtomicStorage].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySampleRateShading].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityTessellationPointSize].caps.push_back(CapabilityTessellation);
+    CapabilityParams[CapabilityGeometryPointSize].caps.push_back(CapabilityGeometry);
+    CapabilityParams[CapabilityImageGatherExtended].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityStorageImageExtendedFormats].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityStorageImageMultisample].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityUniformBufferArrayDynamicIndexing].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySampledImageArrayDynamicIndexing].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityStorageBufferArrayDynamicIndexing].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityStorageImageArrayDynamicIndexing].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityClipDistance].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityCullDistance].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityGenericPointer].caps.push_back(CapabilityAddresses);
+    CapabilityParams[CapabilityInt8].caps.push_back(CapabilityKernel);
+    CapabilityParams[CapabilityInputAttachment].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityMinLod].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySparseResidency].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySampled1D].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySampledRect].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySampledBuffer].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilitySampledCubeArray].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityImageMSArray].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityImage1D].caps.push_back(CapabilitySampled1D);
+    CapabilityParams[CapabilityImageRect].caps.push_back(CapabilitySampledRect);
+    CapabilityParams[CapabilityImageBuffer].caps.push_back(CapabilitySampledBuffer);
+    CapabilityParams[CapabilityImageCubeArray].caps.push_back(CapabilitySampledCubeArray);
+    CapabilityParams[CapabilityImageQuery].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityDerivativeControl].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityInterpolationFunction].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityTransformFeedback].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityGeometryStreams].caps.push_back(CapabilityGeometry);
+    CapabilityParams[CapabilityStorageImageReadWithoutFormat].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityStorageImageWriteWithoutFormat].caps.push_back(CapabilityShader);
+    CapabilityParams[CapabilityMultiViewport].caps.push_back(CapabilityGeometry);
+
     AddressingParams[AddressingModelPhysical32].caps.push_back(CapabilityAddresses);
     AddressingParams[AddressingModelPhysical64].caps.push_back(CapabilityAddresses);
 
     MemoryParams[MemoryModelSimple].caps.push_back(CapabilityShader);
     MemoryParams[MemoryModelGLSL450].caps.push_back(CapabilityShader);
     MemoryParams[MemoryModelOpenCL].caps.push_back(CapabilityKernel);
+
+    MemorySemanticsParams[MemorySemanticsUniformMemoryShift].caps.push_back(CapabilityShader);
+    MemorySemanticsParams[MemorySemanticsAtomicCounterMemoryShift].caps.push_back(CapabilityAtomicStorage);
 
     ExecutionModelParams[ExecutionModelVertex].caps.push_back(CapabilityShader);
     ExecutionModelParams[ExecutionModelTessellationControl].caps.push_back(CapabilityTessellation);
@@ -1270,10 +1438,10 @@ void Parameterize()
     StorageParams[StorageClassInput].caps.push_back(CapabilityShader);
     StorageParams[StorageClassUniform].caps.push_back(CapabilityShader);
     StorageParams[StorageClassOutput].caps.push_back(CapabilityShader);
-    StorageParams[StorageClassPrivateGlobal].caps.push_back(CapabilityShader);
+    StorageParams[StorageClassPrivate].caps.push_back(CapabilityShader);
     StorageParams[StorageClassGeneric].caps.push_back(CapabilityKernel);
     StorageParams[StorageClassAtomicCounter].caps.push_back(CapabilityAtomicStorage);
-
+    StorageParams[StorageClassPushConstant].caps.push_back(CapabilityShader);
 
     // Sampler Filter & Addressing mode capabilities
     SamplerAddressingModeParams[SamplerAddressingModeNone].caps.push_back(CapabilityKernel);
@@ -1286,9 +1454,57 @@ void Parameterize()
     SamplerFilterModeParams[SamplerFilterModeLinear].caps.push_back(CapabilityKernel);
 
     // image format capabilities
-    for (int i = 0; i < ImageFormatCeiling; ++i) {
-        ImageFormatParams[i].caps.push_back(CapabilityShader);
-    }
+
+    // ES/Desktop float
+    ImageFormatParams[ImageFormatRgba32f].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba16f].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatR32f].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba8].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba8Snorm].caps.push_back(CapabilityShader);
+
+    // Desktop float
+    ImageFormatParams[ImageFormatRg32f].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg16f].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR11fG11fB10f].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR16f].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRgba16].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRgb10A2].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg16].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg8].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR16].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR8].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRgba16Snorm].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg16Snorm].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg8Snorm].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR16Snorm].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR8Snorm].caps.push_back(CapabilityStorageImageExtendedFormats);
+
+    // ES/Desktop int
+    ImageFormatParams[ImageFormatRgba32i].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba16i].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba8i].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatR32i].caps.push_back(CapabilityShader);
+
+    // Desktop int
+    ImageFormatParams[ImageFormatRg32i].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg16i].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg8i].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR16i].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR8i].caps.push_back(CapabilityStorageImageExtendedFormats);
+
+    // ES/Desktop uint
+    ImageFormatParams[ImageFormatRgba32ui].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba16ui].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatRgba8ui].caps.push_back(CapabilityShader);
+    ImageFormatParams[ImageFormatR32ui].caps.push_back(CapabilityShader);
+
+    // Desktop uint
+    ImageFormatParams[ImageFormatRgb10a2ui].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg32ui].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg16ui].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatRg8ui].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR16ui].caps.push_back(CapabilityStorageImageExtendedFormats);
+    ImageFormatParams[ImageFormatR8ui].caps.push_back(CapabilityStorageImageExtendedFormats);
 
     // image channel order capabilities
     for (int i = 0; i < ImageChannelOrderCeiling; ++i) {
@@ -1303,6 +1519,7 @@ void Parameterize()
     // image lookup operands
     ImageOperandsParams[ImageOperandsBiasShift].caps.push_back(CapabilityShader);
     ImageOperandsParams[ImageOperandsOffsetShift].caps.push_back(CapabilityImageGatherExtended);
+    ImageOperandsParams[ImageOperandsMinLodShift].caps.push_back(CapabilityMinLod);
 
     // fast math flags capabilities
     for (int i = 0; i < FPFastMathCeiling; ++i) {
@@ -1340,9 +1557,8 @@ void Parameterize()
     ExecutionModeParams[ExecutionModeOriginLowerLeft].caps.push_back(CapabilityShader);
     ExecutionModeParams[ExecutionModeEarlyFragmentTests].caps.push_back(CapabilityShader);
     ExecutionModeParams[ExecutionModePointMode].caps.push_back(CapabilityTessellation);
-    ExecutionModeParams[ExecutionModeXfb].caps.push_back(CapabilityShader);
+    ExecutionModeParams[ExecutionModeXfb].caps.push_back(CapabilityTransformFeedback);
     ExecutionModeParams[ExecutionModeDepthReplacing].caps.push_back(CapabilityShader);
-    ExecutionModeParams[ExecutionModeDepthAny].caps.push_back(CapabilityShader);
     ExecutionModeParams[ExecutionModeDepthGreater].caps.push_back(CapabilityShader);
     ExecutionModeParams[ExecutionModeDepthLess].caps.push_back(CapabilityShader);
     ExecutionModeParams[ExecutionModeDepthUnchanged].caps.push_back(CapabilityShader);
@@ -1350,11 +1566,11 @@ void Parameterize()
     ExecutionModeParams[ExecutionModeInputPoints].caps.push_back(CapabilityGeometry);
     ExecutionModeParams[ExecutionModeInputLines].caps.push_back(CapabilityGeometry);
     ExecutionModeParams[ExecutionModeInputLinesAdjacency].caps.push_back(CapabilityGeometry);
-    ExecutionModeParams[ExecutionModeInputTriangles].caps.push_back(CapabilityGeometry);
-    ExecutionModeParams[ExecutionModeInputTriangles].caps.push_back(CapabilityTessellation);
+    ExecutionModeParams[ExecutionModeTriangles].caps.push_back(CapabilityGeometry);
+    ExecutionModeParams[ExecutionModeTriangles].caps.push_back(CapabilityTessellation);
     ExecutionModeParams[ExecutionModeInputTrianglesAdjacency].caps.push_back(CapabilityGeometry);
-    ExecutionModeParams[ExecutionModeInputQuads].caps.push_back(CapabilityTessellation);
-    ExecutionModeParams[ExecutionModeInputIsolines].caps.push_back(CapabilityTessellation);
+    ExecutionModeParams[ExecutionModeQuads].caps.push_back(CapabilityTessellation);
+    ExecutionModeParams[ExecutionModeIsolines].caps.push_back(CapabilityTessellation);
     ExecutionModeParams[ExecutionModeOutputVertices].caps.push_back(CapabilityGeometry);
     ExecutionModeParams[ExecutionModeOutputVertices].caps.push_back(CapabilityTessellation);
     ExecutionModeParams[ExecutionModeOutputPoints].caps.push_back(CapabilityGeometry);
@@ -1370,46 +1586,59 @@ void Parameterize()
     DecorationParams[DecorationColMajor].caps.push_back(CapabilityMatrix);
     DecorationParams[DecorationGLSLShared].caps.push_back(CapabilityShader);
     DecorationParams[DecorationGLSLPacked].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationSmooth].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationNoperspective].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationNoPerspective].caps.push_back(CapabilityShader);
     DecorationParams[DecorationFlat].caps.push_back(CapabilityShader);
     DecorationParams[DecorationPatch].caps.push_back(CapabilityTessellation);
     DecorationParams[DecorationCentroid].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationSample].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationSample].caps.push_back(CapabilitySampleRateShading);
     DecorationParams[DecorationInvariant].caps.push_back(CapabilityShader);
     DecorationParams[DecorationConstant].caps.push_back(CapabilityKernel);
     DecorationParams[DecorationUniform].caps.push_back(CapabilityShader);
     DecorationParams[DecorationCPacked].caps.push_back(CapabilityKernel);
     DecorationParams[DecorationSaturatedConversion].caps.push_back(CapabilityKernel);
-    DecorationParams[DecorationStream].caps.push_back(CapabilityGeometry);
+    DecorationParams[DecorationStream].caps.push_back(CapabilityGeometryStreams);
     DecorationParams[DecorationLocation].caps.push_back(CapabilityShader);
     DecorationParams[DecorationComponent].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationOffset].caps.push_back(CapabilityShader);
     DecorationParams[DecorationIndex].caps.push_back(CapabilityShader);
     DecorationParams[DecorationBinding].caps.push_back(CapabilityShader);
     DecorationParams[DecorationDescriptorSet].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationXfbBuffer].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationXfbStride].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationXfbBuffer].caps.push_back(CapabilityTransformFeedback);
+    DecorationParams[DecorationXfbStride].caps.push_back(CapabilityTransformFeedback);
     DecorationParams[DecorationArrayStride].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationMatrixStride].caps.push_back(CapabilityShader);
-    DecorationParams[DecorationBuiltIn].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationMatrixStride].caps.push_back(CapabilityMatrix);
     DecorationParams[DecorationFuncParamAttr].caps.push_back(CapabilityKernel);
     DecorationParams[DecorationFPRoundingMode].caps.push_back(CapabilityKernel);
     DecorationParams[DecorationFPFastMathMode].caps.push_back(CapabilityKernel);
     DecorationParams[DecorationLinkageAttributes].caps.push_back(CapabilityLinkage);
     DecorationParams[DecorationSpecId].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationNoContraction].caps.push_back(CapabilityShader);
+    DecorationParams[DecorationInputAttachmentIndex].caps.push_back(CapabilityInputAttachment);
+    DecorationParams[DecorationAlignment].caps.push_back(CapabilityKernel);
 
     BuiltInParams[BuiltInPosition].caps.push_back(CapabilityShader);
     BuiltInParams[BuiltInPointSize].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInClipDistance].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInCullDistance].caps.push_back(CapabilityShader);
+    BuiltInParams[BuiltInClipDistance].caps.push_back(CapabilityClipDistance);
+    BuiltInParams[BuiltInCullDistance].caps.push_back(CapabilityCullDistance);
+
     BuiltInParams[BuiltInVertexId].caps.push_back(CapabilityShader);
+    BuiltInParams[BuiltInVertexId].desc = "Vertex ID, which takes on values 0, 1, 2, . . . .";
+
     BuiltInParams[BuiltInInstanceId].caps.push_back(CapabilityShader);
+    BuiltInParams[BuiltInInstanceId].desc = "Instance ID, which takes on values 0, 1, 2, . . . .";
+
+    BuiltInParams[BuiltInVertexIndex].caps.push_back(CapabilityShader);
+    BuiltInParams[BuiltInVertexIndex].desc = "Vertex index, which takes on values base, base+1, base+2, . . . .";
+
+    BuiltInParams[BuiltInInstanceIndex].caps.push_back(CapabilityShader);
+    BuiltInParams[BuiltInInstanceIndex].desc = "Instance index, which takes on values base, base+1, base+2, . . . .";
+
     BuiltInParams[BuiltInPrimitiveId].caps.push_back(CapabilityGeometry);
     BuiltInParams[BuiltInPrimitiveId].caps.push_back(CapabilityTessellation);
     BuiltInParams[BuiltInInvocationId].caps.push_back(CapabilityGeometry);
     BuiltInParams[BuiltInInvocationId].caps.push_back(CapabilityTessellation);
     BuiltInParams[BuiltInLayer].caps.push_back(CapabilityGeometry);
-    BuiltInParams[BuiltInViewportIndex].caps.push_back(CapabilityGeometry);
+    BuiltInParams[BuiltInViewportIndex].caps.push_back(CapabilityMultiViewport);
     BuiltInParams[BuiltInTessLevelOuter].caps.push_back(CapabilityTessellation);
     BuiltInParams[BuiltInTessLevelInner].caps.push_back(CapabilityTessellation);
     BuiltInParams[BuiltInTessCoord].caps.push_back(CapabilityTessellation);
@@ -1417,19 +1646,16 @@ void Parameterize()
     BuiltInParams[BuiltInFragCoord].caps.push_back(CapabilityShader);
     BuiltInParams[BuiltInPointCoord].caps.push_back(CapabilityShader);
     BuiltInParams[BuiltInFrontFacing].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInSampleId].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInSamplePosition].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInSampleMask].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInFragColor].caps.push_back(CapabilityShader);
+    BuiltInParams[BuiltInSampleId].caps.push_back(CapabilitySampleRateShading);
+    BuiltInParams[BuiltInSamplePosition].caps.push_back(CapabilitySampleRateShading);
+    BuiltInParams[BuiltInSampleMask].caps.push_back(CapabilitySampleRateShading);
     BuiltInParams[BuiltInFragDepth].caps.push_back(CapabilityShader);
     BuiltInParams[BuiltInHelperInvocation].caps.push_back(CapabilityShader);
-    BuiltInParams[BuiltInLocalInvocationIndex].caps.push_back(CapabilityShader);
     BuiltInParams[BuiltInWorkDim].caps.push_back(CapabilityKernel);
     BuiltInParams[BuiltInGlobalSize].caps.push_back(CapabilityKernel);
     BuiltInParams[BuiltInEnqueuedWorkgroupSize].caps.push_back(CapabilityKernel);
     BuiltInParams[BuiltInGlobalOffset].caps.push_back(CapabilityKernel);
     BuiltInParams[BuiltInGlobalLinearId].caps.push_back(CapabilityKernel);
-    BuiltInParams[BuiltInWorkgroupLinearId].caps.push_back(CapabilityKernel);
 
     BuiltInParams[BuiltInSubgroupSize].caps.push_back(CapabilityKernel);
     BuiltInParams[BuiltInSubgroupMaxSize].caps.push_back(CapabilityKernel);
@@ -1438,8 +1664,11 @@ void Parameterize()
     BuiltInParams[BuiltInSubgroupId].caps.push_back(CapabilityKernel);
     BuiltInParams[BuiltInSubgroupLocalInvocationId].caps.push_back(CapabilityKernel);
 
+    DimensionalityParams[Dim1D].caps.push_back(CapabilitySampled1D);
     DimensionalityParams[DimCube].caps.push_back(CapabilityShader);
-    DimensionalityParams[DimRect].caps.push_back(CapabilityShader);
+    DimensionalityParams[DimRect].caps.push_back(CapabilitySampledRect);
+    DimensionalityParams[DimBuffer].caps.push_back(CapabilitySampledBuffer);
+    DimensionalityParams[DimSubpassData].caps.push_back(CapabilityInputAttachment);
 
     // Group Operations
     for (int i = 0; i < GroupOperationCeiling; ++i) {
@@ -1458,6 +1687,10 @@ void Parameterize()
 
     InstructionDesc[OpSource].operands.push(OperandSource, "");
     InstructionDesc[OpSource].operands.push(OperandLiteralNumber, "'Version'");
+    InstructionDesc[OpSource].operands.push(OperandId, "'File'", true);
+    InstructionDesc[OpSource].operands.push(OperandLiteralString, "'Source'", true);
+
+    InstructionDesc[OpSourceContinued].operands.push(OperandLiteralString, "'Continued Source'");
 
     InstructionDesc[OpSourceExtension].operands.push(OperandLiteralString, "'Extension'");
 
@@ -1470,7 +1703,6 @@ void Parameterize()
 
     InstructionDesc[OpString].operands.push(OperandLiteralString, "'String'");
 
-    InstructionDesc[OpLine].operands.push(OperandId, "'Target'");
     InstructionDesc[OpLine].operands.push(OperandId, "'File'");
     InstructionDesc[OpLine].operands.push(OperandLiteralNumber, "'Line'");
     InstructionDesc[OpLine].operands.push(OperandLiteralNumber, "'Column'");
@@ -1487,10 +1719,11 @@ void Parameterize()
     InstructionDesc[OpEntryPoint].operands.push(OperandExecutionModel, "");
     InstructionDesc[OpEntryPoint].operands.push(OperandId, "'Entry Point'");
     InstructionDesc[OpEntryPoint].operands.push(OperandLiteralString, "'Name'");
+    InstructionDesc[OpEntryPoint].operands.push(OperandVariableIds, "'Interface'");
 
     InstructionDesc[OpExecutionMode].operands.push(OperandId, "'Entry Point'");
     InstructionDesc[OpExecutionMode].operands.push(OperandExecutionMode, "'Mode'");
-    InstructionDesc[OpExecutionMode].operands.push(OperandOptionalLiteral, "See <<Execution Mode,Execution Mode>>");
+    InstructionDesc[OpExecutionMode].operands.push(OperandOptionalLiteral, "See <<Execution_Mode,Execution Mode>>");
 
     InstructionDesc[OpTypeInt].operands.push(OperandLiteralNumber, "'Width'");
     InstructionDesc[OpTypeInt].operands.push(OperandLiteralNumber, "'Signedness'");
@@ -1511,7 +1744,7 @@ void Parameterize()
     InstructionDesc[OpTypeImage].operands.push(OperandLiteralNumber, "'MS'");
     InstructionDesc[OpTypeImage].operands.push(OperandLiteralNumber, "'Sampled'");
     InstructionDesc[OpTypeImage].operands.push(OperandSamplerImageFormat, "");
-    InstructionDesc[OpTypeImage].operands.push(OperandOptionalLiteral, "'Access Qualifier'");
+    InstructionDesc[OpTypeImage].operands.push(OperandAccessQualifier, "", true);
 
     InstructionDesc[OpTypeSampledImage].operands.push(OperandId, "'Image Type'");
 
@@ -1529,15 +1762,18 @@ void Parameterize()
     InstructionDesc[OpTypePointer].operands.push(OperandStorage, "");
     InstructionDesc[OpTypePointer].operands.push(OperandId, "'Type'");
 
+    InstructionDesc[OpTypeForwardPointer].capabilities.push_back(CapabilityAddresses);
+    InstructionDesc[OpTypeForwardPointer].operands.push(OperandId, "'Pointer Type'");
+    InstructionDesc[OpTypeForwardPointer].operands.push(OperandStorage, "");
+
     InstructionDesc[OpTypeEvent].capabilities.push_back(CapabilityKernel);
 
-    InstructionDesc[OpTypeDeviceEvent].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpTypeDeviceEvent].capabilities.push_back(CapabilityDeviceEnqueue);
 
     InstructionDesc[OpTypeReserveId].capabilities.push_back(CapabilityPipes);
 
-    InstructionDesc[OpTypeQueue].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpTypeQueue].capabilities.push_back(CapabilityDeviceEnqueue);
 
-    InstructionDesc[OpTypePipe].operands.push(OperandId, "'Type'");
     InstructionDesc[OpTypePipe].operands.push(OperandAccessQualifier, "'Qualifier'");
     InstructionDesc[OpTypePipe].capabilities.push_back(CapabilityPipes);
 
@@ -1561,7 +1797,7 @@ void Parameterize()
     InstructionDesc[OpSpecConstantOp].operands.push(OperandVariableIds, "'Operands'");
 
     InstructionDesc[OpVariable].operands.push(OperandStorage, "");
-    InstructionDesc[OpVariable].operands.push(OperandOptionalId, "'Initializer'");
+    InstructionDesc[OpVariable].operands.push(OperandId, "'Initializer'", true);
 
     InstructionDesc[OpFunction].operands.push(OperandFunction, "");
     InstructionDesc[OpFunction].operands.push(OperandId, "'Function Type'");
@@ -1574,11 +1810,11 @@ void Parameterize()
     InstructionDesc[OpExtInst].operands.push(OperandVariableIds, "'Operand 1', +\n'Operand 2', +\n...");
 
     InstructionDesc[OpLoad].operands.push(OperandId, "'Pointer'");
-    InstructionDesc[OpLoad].operands.push(OperandOptionalLiteral, "'Memory Access'");
+    InstructionDesc[OpLoad].operands.push(OperandMemoryAccess, "", true);
 
     InstructionDesc[OpStore].operands.push(OperandId, "'Pointer'");
     InstructionDesc[OpStore].operands.push(OperandId, "'Object'");
-    InstructionDesc[OpStore].operands.push(OperandOptionalLiteral, "'Memory Access'");
+    InstructionDesc[OpStore].operands.push(OperandMemoryAccess, "", true);
 
     InstructionDesc[OpPhi].operands.push(OperandVariableIds, "'Variable, Parent, ...'");
 
@@ -1621,101 +1857,202 @@ void Parameterize()
 
     InstructionDesc[OpCopyMemory].operands.push(OperandId, "'Target'");
     InstructionDesc[OpCopyMemory].operands.push(OperandId, "'Source'");
-    InstructionDesc[OpCopyMemory].operands.push(OperandOptionalLiteral, "'Memory Access'");
+    InstructionDesc[OpCopyMemory].operands.push(OperandMemoryAccess, "", true);
 
     InstructionDesc[OpCopyMemorySized].operands.push(OperandId, "'Target'");
     InstructionDesc[OpCopyMemorySized].operands.push(OperandId, "'Source'");
     InstructionDesc[OpCopyMemorySized].operands.push(OperandId, "'Size'");
-    InstructionDesc[OpCopyMemorySized].operands.push(OperandOptionalLiteral, "'Memory Access'");
+    InstructionDesc[OpCopyMemorySized].operands.push(OperandMemoryAccess, "", true);
 
     InstructionDesc[OpCopyMemorySized].capabilities.push_back(CapabilityAddresses);
 
     InstructionDesc[OpSampledImage].operands.push(OperandId, "'Image'");
     InstructionDesc[OpSampledImage].operands.push(OperandId, "'Sampler'");
 
+    InstructionDesc[OpImage].operands.push(OperandId, "'Sampled Image'");
+
     InstructionDesc[OpImageRead].operands.push(OperandId, "'Image'");
     InstructionDesc[OpImageRead].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageRead].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageRead].operands.push(OperandVariableIds, "", true);
 
     InstructionDesc[OpImageWrite].operands.push(OperandId, "'Image'");
     InstructionDesc[OpImageWrite].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageWrite].operands.push(OperandId, "'Texel'");
+    InstructionDesc[OpImageWrite].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageWrite].operands.push(OperandVariableIds, "", true);
 
     InstructionDesc[OpImageSampleImplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleImplicitLod].operands.push(OperandId, "'Coordinate'");
-    InstructionDesc[OpImageSampleImplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleImplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleImplicitLod].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageSampleExplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleExplicitLod].operands.push(OperandId, "'Coordinate'");
-    InstructionDesc[OpImageSampleExplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleExplicitLod].operands.push(OperandVariableIds, "", true);
 
     InstructionDesc[OpImageSampleDrefImplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleDrefImplicitLod].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageSampleDrefImplicitLod].operands.push(OperandId, "'D~ref~'");
-    InstructionDesc[OpImageSampleDrefImplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleDrefImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleDrefImplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleDrefImplicitLod].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageSampleDrefExplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleDrefExplicitLod].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageSampleDrefExplicitLod].operands.push(OperandId, "'D~ref~'");
-    InstructionDesc[OpImageSampleDrefExplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleDrefExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleDrefExplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleDrefExplicitLod].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageSampleProjImplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleProjImplicitLod].operands.push(OperandId, "'Coordinate'");
-    InstructionDesc[OpImageSampleProjImplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleProjImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleProjImplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleProjImplicitLod].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageSampleProjExplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleProjExplicitLod].operands.push(OperandId, "'Coordinate'");
-    InstructionDesc[OpImageSampleProjExplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleProjExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleProjExplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleProjExplicitLod].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageSampleProjDrefImplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleProjDrefImplicitLod].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageSampleProjDrefImplicitLod].operands.push(OperandId, "'D~ref~'");
-    InstructionDesc[OpImageSampleProjDrefImplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleProjDrefImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleProjDrefImplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleProjDrefImplicitLod].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageSampleProjDrefExplicitLod].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageSampleProjDrefExplicitLod].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageSampleProjDrefExplicitLod].operands.push(OperandId, "'D~ref~'");
-    InstructionDesc[OpImageSampleProjDrefExplicitLod].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageSampleProjDrefExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSampleProjDrefExplicitLod].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageSampleProjDrefExplicitLod].capabilities.push_back(CapabilityShader);
 
-    InstructionDesc[OpImageFetch].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageFetch].operands.push(OperandId, "'Image'");
     InstructionDesc[OpImageFetch].operands.push(OperandId, "'Coordinate'");
-    InstructionDesc[OpImageFetch].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageFetch].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageFetch].operands.push(OperandVariableIds, "", true);
 
     InstructionDesc[OpImageGather].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageGather].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageGather].operands.push(OperandId, "'Component'");
-    InstructionDesc[OpImageGather].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageGather].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageGather].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageGather].capabilities.push_back(CapabilityShader);
 
     InstructionDesc[OpImageDrefGather].operands.push(OperandId, "'Sampled Image'");
     InstructionDesc[OpImageDrefGather].operands.push(OperandId, "'Coordinate'");
     InstructionDesc[OpImageDrefGather].operands.push(OperandId, "'D~ref~'");
-    InstructionDesc[OpImageDrefGather].operands.push(OperandOptionalImage, "");
+    InstructionDesc[OpImageDrefGather].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageDrefGather].operands.push(OperandVariableIds, "", true);
     InstructionDesc[OpImageDrefGather].capabilities.push_back(CapabilityShader);
+
+    InstructionDesc[OpImageSparseSampleImplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleImplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleImplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleImplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleExplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleExplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleExplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleExplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleDrefImplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleDrefImplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleDrefImplicitLod].operands.push(OperandId, "'D~ref~'");
+    InstructionDesc[OpImageSparseSampleDrefImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleDrefImplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleDrefImplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleDrefExplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleDrefExplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleDrefExplicitLod].operands.push(OperandId, "'D~ref~'");
+    InstructionDesc[OpImageSparseSampleDrefExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleDrefExplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleDrefExplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleProjImplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleProjImplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleProjImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleProjImplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleProjImplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleProjExplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleProjExplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleProjExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleProjExplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleProjExplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleProjDrefImplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleProjDrefImplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleProjDrefImplicitLod].operands.push(OperandId, "'D~ref~'");
+    InstructionDesc[OpImageSparseSampleProjDrefImplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleProjDrefImplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleProjDrefImplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseSampleProjDrefExplicitLod].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseSampleProjDrefExplicitLod].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseSampleProjDrefExplicitLod].operands.push(OperandId, "'D~ref~'");
+    InstructionDesc[OpImageSparseSampleProjDrefExplicitLod].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseSampleProjDrefExplicitLod].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseSampleProjDrefExplicitLod].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseFetch].operands.push(OperandId, "'Image'");
+    InstructionDesc[OpImageSparseFetch].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseFetch].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseFetch].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseFetch].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseGather].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseGather].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseGather].operands.push(OperandId, "'Component'");
+    InstructionDesc[OpImageSparseGather].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseGather].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseGather].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseDrefGather].operands.push(OperandId, "'Sampled Image'");
+    InstructionDesc[OpImageSparseDrefGather].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseDrefGather].operands.push(OperandId, "'D~ref~'");
+    InstructionDesc[OpImageSparseDrefGather].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseDrefGather].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseDrefGather].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseRead].operands.push(OperandId, "'Image'");
+    InstructionDesc[OpImageSparseRead].operands.push(OperandId, "'Coordinate'");
+    InstructionDesc[OpImageSparseRead].operands.push(OperandImageOperands, "", true);
+    InstructionDesc[OpImageSparseRead].operands.push(OperandVariableIds, "", true);
+    InstructionDesc[OpImageSparseRead].capabilities.push_back(CapabilitySparseResidency);
+
+    InstructionDesc[OpImageSparseTexelsResident].operands.push(OperandId, "'Resident Code'");
+    InstructionDesc[OpImageSparseTexelsResident].capabilities.push_back(CapabilitySparseResidency);
 
     InstructionDesc[OpImageQuerySizeLod].operands.push(OperandId, "'Image'");
     InstructionDesc[OpImageQuerySizeLod].operands.push(OperandId, "'Level of Detail'");
+    InstructionDesc[OpImageQuerySizeLod].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpImageQuerySizeLod].capabilities.push_back(CapabilityImageQuery);
 
     InstructionDesc[OpImageQuerySize].operands.push(OperandId, "'Image'");
+    InstructionDesc[OpImageQuerySize].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpImageQuerySize].capabilities.push_back(CapabilityImageQuery);
 
     InstructionDesc[OpImageQueryLod].operands.push(OperandId, "'Image'");
     InstructionDesc[OpImageQueryLod].operands.push(OperandId, "'Coordinate'");
-    InstructionDesc[OpImageQueryLod].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpImageQueryLod].capabilities.push_back(CapabilityImageQuery);
 
     InstructionDesc[OpImageQueryLevels].operands.push(OperandId, "'Image'");
-    InstructionDesc[OpImageQueryLevels].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpImageQueryLevels].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpImageQueryLevels].capabilities.push_back(CapabilityImageQuery);
 
     InstructionDesc[OpImageQuerySamples].operands.push(OperandId, "'Image'");
-    InstructionDesc[OpImageQuerySamples].capabilities.push_back(CapabilityShader);
-
-    InstructionDesc[OpImageQueryDim].operands.push(OperandId, "'Image'");
-    InstructionDesc[OpImageQueryDim].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpImageQuerySamples].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpImageQuerySamples].capabilities.push_back(CapabilityImageQuery);
 
     InstructionDesc[OpImageQueryFormat].operands.push(OperandId, "'Image'");
     InstructionDesc[OpImageQueryFormat].capabilities.push_back(CapabilityKernel);
@@ -1733,6 +2070,11 @@ void Parameterize()
     InstructionDesc[OpPtrAccessChain].operands.push(OperandId, "'Element'");
     InstructionDesc[OpPtrAccessChain].operands.push(OperandVariableIds, "'Indexes'");
     InstructionDesc[OpPtrAccessChain].capabilities.push_back(CapabilityAddresses);
+
+    InstructionDesc[OpInBoundsPtrAccessChain].operands.push(OperandId, "'Base'");
+    InstructionDesc[OpInBoundsPtrAccessChain].operands.push(OperandId, "'Element'");
+    InstructionDesc[OpInBoundsPtrAccessChain].operands.push(OperandVariableIds, "'Indexes'");
+    InstructionDesc[OpInBoundsPtrAccessChain].capabilities.push_back(CapabilityAddresses);
 
     InstructionDesc[OpSNegate].operands.push(OperandId, "'Operand'");
 
@@ -1887,6 +2229,18 @@ void Parameterize()
     InstructionDesc[OpDot].operands.push(OperandId, "'Vector 1'");
     InstructionDesc[OpDot].operands.push(OperandId, "'Vector 2'");
 
+    InstructionDesc[OpIAddCarry].operands.push(OperandId, "'Operand 1'");
+    InstructionDesc[OpIAddCarry].operands.push(OperandId, "'Operand 2'");
+
+    InstructionDesc[OpISubBorrow].operands.push(OperandId, "'Operand 1'");
+    InstructionDesc[OpISubBorrow].operands.push(OperandId, "'Operand 2'");
+
+    InstructionDesc[OpUMulExtended].operands.push(OperandId, "'Operand 1'");
+    InstructionDesc[OpUMulExtended].operands.push(OperandId, "'Operand 2'");
+
+    InstructionDesc[OpSMulExtended].operands.push(OperandId, "'Operand 1'");
+    InstructionDesc[OpSMulExtended].operands.push(OperandId, "'Operand 2'");
+
     InstructionDesc[OpShiftRightLogical].operands.push(OperandId, "'Base'");
     InstructionDesc[OpShiftRightLogical].operands.push(OperandId, "'Shift'");
 
@@ -2019,22 +2373,22 @@ void Parameterize()
     InstructionDesc[OpFwidth].capabilities.push_back(CapabilityShader);
     InstructionDesc[OpFwidth].operands.push(OperandId, "'P'");
 
-    InstructionDesc[OpDPdxFine].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpDPdxFine].capabilities.push_back(CapabilityDerivativeControl);
     InstructionDesc[OpDPdxFine].operands.push(OperandId, "'P'");
 
-    InstructionDesc[OpDPdyFine].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpDPdyFine].capabilities.push_back(CapabilityDerivativeControl);
     InstructionDesc[OpDPdyFine].operands.push(OperandId, "'P'");
 
-    InstructionDesc[OpFwidthFine].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpFwidthFine].capabilities.push_back(CapabilityDerivativeControl);
     InstructionDesc[OpFwidthFine].operands.push(OperandId, "'P'");
 
-    InstructionDesc[OpDPdxCoarse].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpDPdxCoarse].capabilities.push_back(CapabilityDerivativeControl);
     InstructionDesc[OpDPdxCoarse].operands.push(OperandId, "'P'");
 
-    InstructionDesc[OpDPdyCoarse].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpDPdyCoarse].capabilities.push_back(CapabilityDerivativeControl);
     InstructionDesc[OpDPdyCoarse].operands.push(OperandId, "'P'");
 
-    InstructionDesc[OpFwidthCoarse].capabilities.push_back(CapabilityShader);
+    InstructionDesc[OpFwidthCoarse].capabilities.push_back(CapabilityDerivativeControl);
     InstructionDesc[OpFwidthCoarse].operands.push(OperandId, "'P'");
 
     InstructionDesc[OpEmitVertex].capabilities.push_back(CapabilityGeometry);
@@ -2042,10 +2396,10 @@ void Parameterize()
     InstructionDesc[OpEndPrimitive].capabilities.push_back(CapabilityGeometry);
 
     InstructionDesc[OpEmitStreamVertex].operands.push(OperandId, "'Stream'");
-    InstructionDesc[OpEmitStreamVertex].capabilities.push_back(CapabilityGeometry);
+    InstructionDesc[OpEmitStreamVertex].capabilities.push_back(CapabilityGeometryStreams);
 
     InstructionDesc[OpEndStreamPrimitive].operands.push(OperandId, "'Stream'");
-    InstructionDesc[OpEndStreamPrimitive].capabilities.push_back(CapabilityGeometry);
+    InstructionDesc[OpEndStreamPrimitive].capabilities.push_back(CapabilityGeometryStreams);
 
     InstructionDesc[OpControlBarrier].operands.push(OperandScope, "'Execution'");
     InstructionDesc[OpControlBarrier].operands.push(OperandScope, "'Memory'");
@@ -2140,7 +2494,18 @@ void Parameterize()
     InstructionDesc[OpAtomicXor].operands.push(OperandMemorySemantics, "'Semantics'");
     InstructionDesc[OpAtomicXor].operands.push(OperandId, "'Value'");
 
+    InstructionDesc[OpAtomicFlagTestAndSet].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpAtomicFlagTestAndSet].operands.push(OperandScope, "'Scope'");
+    InstructionDesc[OpAtomicFlagTestAndSet].operands.push(OperandMemorySemantics, "'Semantics'");
+    InstructionDesc[OpAtomicFlagTestAndSet].capabilities.push_back(CapabilityKernel);
+
+    InstructionDesc[OpAtomicFlagClear].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpAtomicFlagClear].operands.push(OperandScope, "'Scope'");
+    InstructionDesc[OpAtomicFlagClear].operands.push(OperandMemorySemantics, "'Semantics'");
+    InstructionDesc[OpAtomicFlagClear].capabilities.push_back(CapabilityKernel);
+
     InstructionDesc[OpLoopMerge].operands.push(OperandId, "'Merge Block'");
+    InstructionDesc[OpLoopMerge].operands.push(OperandId, "'Continue Target'");
     InstructionDesc[OpLoopMerge].operands.push(OperandLoop, "");
 
     InstructionDesc[OpSelectionMerge].operands.push(OperandId, "'Merge Block'");
@@ -2163,22 +2528,24 @@ void Parameterize()
 
     InstructionDesc[OpLifetimeStart].operands.push(OperandId, "'Pointer'");
     InstructionDesc[OpLifetimeStart].operands.push(OperandLiteralNumber, "'Size'");
+    InstructionDesc[OpLifetimeStart].capabilities.push_back(CapabilityKernel);
 
     InstructionDesc[OpLifetimeStop].operands.push(OperandId, "'Pointer'");
     InstructionDesc[OpLifetimeStop].operands.push(OperandLiteralNumber, "'Size'");
+    InstructionDesc[OpLifetimeStop].capabilities.push_back(CapabilityKernel);
 
-    InstructionDesc[OpAsyncGroupCopy].capabilities.push_back(CapabilityKernel);
-    InstructionDesc[OpAsyncGroupCopy].operands.push(OperandScope, "'Execution'");
-    InstructionDesc[OpAsyncGroupCopy].operands.push(OperandId, "'Destination'");
-    InstructionDesc[OpAsyncGroupCopy].operands.push(OperandId, "'Source'");
-    InstructionDesc[OpAsyncGroupCopy].operands.push(OperandId, "'Num Elements'");
-    InstructionDesc[OpAsyncGroupCopy].operands.push(OperandId, "'Stride'");
-    InstructionDesc[OpAsyncGroupCopy].operands.push(OperandId, "'Event'");
+    InstructionDesc[OpGroupAsyncCopy].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpGroupAsyncCopy].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupAsyncCopy].operands.push(OperandId, "'Destination'");
+    InstructionDesc[OpGroupAsyncCopy].operands.push(OperandId, "'Source'");
+    InstructionDesc[OpGroupAsyncCopy].operands.push(OperandId, "'Num Elements'");
+    InstructionDesc[OpGroupAsyncCopy].operands.push(OperandId, "'Stride'");
+    InstructionDesc[OpGroupAsyncCopy].operands.push(OperandId, "'Event'");
 
-    InstructionDesc[OpWaitGroupEvents].capabilities.push_back(CapabilityKernel);
-    InstructionDesc[OpWaitGroupEvents].operands.push(OperandScope, "'Execution'");
-    InstructionDesc[OpWaitGroupEvents].operands.push(OperandId, "'Num Events'");
-    InstructionDesc[OpWaitGroupEvents].operands.push(OperandId, "'Events List'");
+    InstructionDesc[OpGroupWaitEvents].capabilities.push_back(CapabilityKernel);
+    InstructionDesc[OpGroupWaitEvents].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupWaitEvents].operands.push(OperandId, "'Num Events'");
+    InstructionDesc[OpGroupWaitEvents].operands.push(OperandId, "'Events List'");
 
     InstructionDesc[OpGroupAll].capabilities.push_back(CapabilityGroups);
     InstructionDesc[OpGroupAll].operands.push(OperandScope, "'Execution'");
@@ -2236,67 +2603,95 @@ void Parameterize()
     InstructionDesc[OpReadPipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpReadPipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpReadPipe].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpReadPipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpReadPipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpWritePipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpWritePipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpWritePipe].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpWritePipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpWritePipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpReservedReadPipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpReservedReadPipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpReservedReadPipe].operands.push(OperandId, "'Reserve Id'");
     InstructionDesc[OpReservedReadPipe].operands.push(OperandId, "'Index'");
     InstructionDesc[OpReservedReadPipe].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpReservedReadPipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpReservedReadPipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpReservedWritePipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpReservedWritePipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpReservedWritePipe].operands.push(OperandId, "'Reserve Id'");
     InstructionDesc[OpReservedWritePipe].operands.push(OperandId, "'Index'");
     InstructionDesc[OpReservedWritePipe].operands.push(OperandId, "'Pointer'");
+    InstructionDesc[OpReservedWritePipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpReservedWritePipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpReserveReadPipePackets].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpReserveReadPipePackets].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpReserveReadPipePackets].operands.push(OperandId, "'Num Packets'");
+    InstructionDesc[OpReserveReadPipePackets].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpReserveReadPipePackets].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpReserveWritePipePackets].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpReserveWritePipePackets].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpReserveWritePipePackets].operands.push(OperandId, "'Num Packets'");
+    InstructionDesc[OpReserveWritePipePackets].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpReserveWritePipePackets].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpCommitReadPipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpCommitReadPipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpCommitReadPipe].operands.push(OperandId, "'Reserve Id'");
+    InstructionDesc[OpCommitReadPipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpCommitReadPipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpCommitWritePipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpCommitWritePipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpCommitWritePipe].operands.push(OperandId, "'Reserve Id'");
+    InstructionDesc[OpCommitWritePipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpCommitWritePipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpIsValidReserveId].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpIsValidReserveId].operands.push(OperandId, "'Reserve Id'");
 
     InstructionDesc[OpGetNumPipePackets].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpGetNumPipePackets].operands.push(OperandId, "'Pipe'");
+    InstructionDesc[OpGetNumPipePackets].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpGetNumPipePackets].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpGetMaxPipePackets].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpGetMaxPipePackets].operands.push(OperandId, "'Pipe'");
+    InstructionDesc[OpGetMaxPipePackets].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpGetMaxPipePackets].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpGroupReserveReadPipePackets].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpGroupReserveReadPipePackets].operands.push(OperandScope, "'Execution'");
     InstructionDesc[OpGroupReserveReadPipePackets].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpGroupReserveReadPipePackets].operands.push(OperandId, "'Num Packets'");
+    InstructionDesc[OpGroupReserveReadPipePackets].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpGroupReserveReadPipePackets].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpGroupReserveWritePipePackets].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpGroupReserveWritePipePackets].operands.push(OperandScope, "'Execution'");
     InstructionDesc[OpGroupReserveWritePipePackets].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpGroupReserveWritePipePackets].operands.push(OperandId, "'Num Packets'");
+    InstructionDesc[OpGroupReserveWritePipePackets].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpGroupReserveWritePipePackets].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpGroupCommitReadPipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpGroupCommitReadPipe].operands.push(OperandScope, "'Execution'");
     InstructionDesc[OpGroupCommitReadPipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpGroupCommitReadPipe].operands.push(OperandId, "'Reserve Id'");
+    InstructionDesc[OpGroupCommitReadPipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpGroupCommitReadPipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpGroupCommitWritePipe].capabilities.push_back(CapabilityPipes);
     InstructionDesc[OpGroupCommitWritePipe].operands.push(OperandScope, "'Execution'");
     InstructionDesc[OpGroupCommitWritePipe].operands.push(OperandId, "'Pipe'");
     InstructionDesc[OpGroupCommitWritePipe].operands.push(OperandId, "'Reserve Id'");
+    InstructionDesc[OpGroupCommitWritePipe].operands.push(OperandId, "'Packet Size'");
+    InstructionDesc[OpGroupCommitWritePipe].operands.push(OperandId, "'Packet Alignment'");
 
     InstructionDesc[OpBuildNDRange].capabilities.push_back(CapabilityDeviceEnqueue);
     InstructionDesc[OpBuildNDRange].operands.push(OperandId, "'GlobalWorkSize'");
@@ -2371,6 +2766,56 @@ void Parameterize()
     InstructionDesc[OpEnqueueMarker].operands.push(OperandId, "'Num Events'");
     InstructionDesc[OpEnqueueMarker].operands.push(OperandId, "'Wait Events'");
     InstructionDesc[OpEnqueueMarker].operands.push(OperandId, "'Ret Event'");
+
+    InstructionDesc[OpSubgroupBallotKHR].operands.push(OperandId, "'Predicate'");
+
+    InstructionDesc[OpSubgroupFirstInvocationKHR].operands.push(OperandId, "'Value'");
+
+    InstructionDesc[OpSubgroupReadInvocationKHR].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpSubgroupReadInvocationKHR].operands.push(OperandId, "'Value'");
+    InstructionDesc[OpSubgroupReadInvocationKHR].operands.push(OperandId, "'Index'");
+
+#ifdef AMD_EXTENSIONS
+    InstructionDesc[OpGroupIAddNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupIAddNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupIAddNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupIAddNonUniformAMD].operands.push(OperandId, "'X'");
+
+    InstructionDesc[OpGroupFAddNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupFAddNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupFAddNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupFAddNonUniformAMD].operands.push(OperandId, "'X'");
+
+    InstructionDesc[OpGroupUMinNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupUMinNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupUMinNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupUMinNonUniformAMD].operands.push(OperandId, "'X'");
+
+    InstructionDesc[OpGroupSMinNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupSMinNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupSMinNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupSMinNonUniformAMD].operands.push(OperandId, "X");
+
+    InstructionDesc[OpGroupFMinNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupFMinNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupFMinNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupFMinNonUniformAMD].operands.push(OperandId, "X");
+
+    InstructionDesc[OpGroupUMaxNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupUMaxNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupUMaxNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupUMaxNonUniformAMD].operands.push(OperandId, "X");
+
+    InstructionDesc[OpGroupSMaxNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupSMaxNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupSMaxNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupSMaxNonUniformAMD].operands.push(OperandId, "X");
+
+    InstructionDesc[OpGroupFMaxNonUniformAMD].capabilities.push_back(CapabilityGroups);
+    InstructionDesc[OpGroupFMaxNonUniformAMD].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpGroupFMaxNonUniformAMD].operands.push(OperandGroupOperation, "'Operation'");
+    InstructionDesc[OpGroupFMaxNonUniformAMD].operands.push(OperandId, "X");
+#endif
 }
 
 }; // end spv namespace

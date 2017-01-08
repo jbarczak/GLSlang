@@ -1,12 +1,12 @@
 //
-//Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
-//Copyright (C) 2013 LunarG, Inc.
+// Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
+// Copyright (C) 2013 LunarG, Inc.
 //
-//All rights reserved.
+// All rights reserved.
 //
-//Redistribution and use in source and binary forms, with or without
-//modification, are permitted provided that the following conditions
-//are met:
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
 //
 //    Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
@@ -20,18 +20,18 @@
 //    contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-//"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-//LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-//FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-//COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-//INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-//LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-//ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-//POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 //
 
 #ifndef _SYMBOL_TABLE_INCLUDED_
@@ -120,7 +120,7 @@ protected:
     const TString *name;
     unsigned int uniqueId;      // For cross-scope comparing during code generation
 
-    // For tracking what extensions must be present 
+    // For tracking what extensions must be present
     // (don't use if correct version/profile is present).
     int numExtensions;
     const char** extensions; // an array of pointers to existing constant char strings
@@ -135,7 +135,7 @@ protected:
 //
 // Variable class, meaning a symbol that's not a function.
 //
-// There could be a separate class heirarchy for Constant variables;
+// There could be a separate class hierarchy for Constant variables;
 // Only one of int, bool, or float, (or none) is correct for
 // any particular use, but it's easy to do this way, and doesn't
 // seem worth having separate classes, and "getConst" can't simply return
@@ -144,7 +144,11 @@ protected:
 //
 class TVariable : public TSymbol {
 public:
-    TVariable(const TString *name, const TType& t, bool uT = false ) : TSymbol(name), userType(uT) { type.shallowCopy(t); }
+    TVariable(const TString *name, const TType& t, bool uT = false )
+        : TSymbol(name),
+          userType(uT),
+          constSubtree(nullptr),
+          anonId(-1) { type.shallowCopy(t); }
     virtual TVariable* clone() const;
     virtual ~TVariable() { }
 
@@ -153,9 +157,13 @@ public:
     virtual const TType& getType() const { return type; }
     virtual TType& getWritableType() { assert(writable); return type; }
     virtual bool isUserType() const { return userType; }
-    virtual const TConstUnionArray& getConstArray() const { return unionArray; }
-    virtual TConstUnionArray& getWritableConstArray() { assert(writable); return unionArray; }
-    virtual void setConstArray(const TConstUnionArray& constArray) { unionArray = constArray; }
+    virtual const TConstUnionArray& getConstArray() const { return constArray; }
+    virtual TConstUnionArray& getWritableConstArray() { assert(writable); return constArray; }
+    virtual void setConstArray(const TConstUnionArray& array) { constArray = array; }
+    virtual void setConstSubtree(TIntermTyped* subtree) { constSubtree = subtree; }
+    virtual TIntermTyped* getConstSubtree() const { return constSubtree; }
+    virtual void setAnonId(int i) { anonId = i; }
+    virtual int getAnonId() const { return anonId; }
 
     virtual void dump(TInfoSink &infoSink) const;
 
@@ -167,7 +175,13 @@ protected:
     bool userType;
     // we are assuming that Pool Allocator will free the memory allocated to unionArray
     // when this object is destroyed
-    TConstUnionArray unionArray;
+
+    // TODO: these two should be a union
+    // A variable could be a compile-time constant, or a specialization
+    // constant, or neither, but never both.
+    TConstUnionArray constArray;  // for compile-time constant value
+    TIntermTyped* constSubtree;   // for specialization constant computation
+    int anonId;                   // the ID used for anonymous blocks: TODO: see if uniqueId could serve a dual purpose
 };
 
 //
@@ -177,13 +191,15 @@ protected:
 struct TParameter {
     TString *name;
     TType* type;
-    void copyParam(const TParameter& param) 
+    TIntermTyped* defaultValue;
+    void copyParam(const TParameter& param)
     {
         if (param.name)
             name = NewPoolTString(param.name->c_str());
         else
             name = 0;
         type = param.type->clone();
+        defaultValue = param.defaultValue;
     }
 };
 
@@ -195,12 +211,12 @@ public:
     explicit TFunction(TOperator o) :
         TSymbol(0),
         op(o),
-        defined(false), prototyped(false) { }
+        defined(false), prototyped(false), defaultParamCount(0) { }
     TFunction(const TString *name, const TType& retType, TOperator tOp = EOpNull) :
         TSymbol(name),
         mangledName(*name + '('),
         op(tOp),
-        defined(false), prototyped(false) { returnType.shallowCopy(retType); }
+        defined(false), prototyped(false), defaultParamCount(0) { returnType.shallowCopy(retType); }
     virtual TFunction* clone() const;
     virtual ~TFunction();
 
@@ -212,6 +228,9 @@ public:
         assert(writable);
         parameters.push_back(p);
         p.type->appendMangledName(mangledName);
+
+        if (p.defaultValue != nullptr)
+            defaultParamCount++;
     }
 
     virtual const TString& getMangledName() const { return mangledName; }
@@ -224,7 +243,13 @@ public:
     virtual void setPrototyped() { assert(writable); prototyped = true; }
     virtual bool isPrototyped() const { return prototyped; }
 
+    // Return total number of parameters
     virtual int getParamCount() const { return static_cast<int>(parameters.size()); }
+    // Return number of parameters with default values.
+    virtual int getDefaultParamCount() const { return defaultParamCount; }
+    // Return number of fixed parameters (without default values)
+    virtual int getFixedParamCount() const { return getParamCount() - getDefaultParamCount(); }
+
     virtual TParameter& operator[](int i) { assert(writable); return parameters[i]; }
     virtual const TParameter& operator[](int i) const { return parameters[i]; }
 
@@ -241,6 +266,7 @@ protected:
     TOperator op;
     bool defined;
     bool prototyped;
+    int  defaultParamCount;
 };
 
 //
@@ -258,7 +284,7 @@ public:
     virtual const TAnonMember* getAsAnonMember() const { return this; }
     virtual const TVariable& getAnonContainer() const { return anonContainer; }
     virtual unsigned int getMemberNumber() const { return memberNumber; }
-    
+
     virtual const TType& getType() const
     {
         const TTypeList& types = *anonContainer.getType().getStruct();
@@ -271,7 +297,7 @@ public:
         const TTypeList& types = *anonContainer.getType().getStruct();
         return *types[memberNumber].type;
     }
-    
+
     virtual int getAnonId() const { return anonId; }
     virtual void dump(TInfoSink &infoSink) const;
 
@@ -295,27 +321,16 @@ public:
         //
         // returning true means symbol was added to the table with no semantic errors
         //
-        tInsertResult result;
         const TString& name = symbol.getName();
         if (name == "") {
+            symbol.getAsVariable()->setAnonId(anonId++);
             // An empty name means an anonymous container, exposing its members to the external scope.
             // Give it a name and insert its members in the symbol table, pointing to the container.
             char buf[20];
-            snprintf(buf, 20, "%s%d", AnonymousPrefix, anonId);
+            snprintf(buf, 20, "%s%d", AnonymousPrefix, symbol.getAsVariable()->getAnonId());
             symbol.changeName(NewPoolTString(buf));
 
-            bool isOkay = true;
-            const TTypeList& types = *symbol.getAsVariable()->getType().getStruct();
-            for (unsigned int m = 0; m < types.size(); ++m) {
-                TAnonMember* member = new TAnonMember(&types[m].type->getFieldName(), m, *symbol.getAsVariable(), anonId);
-                result = level.insert(tLevelPair(member->getMangledName(), member));
-                if (! result.second)
-                    isOkay = false;
-            }
-
-            ++anonId;
-
-            return isOkay;
+            return insertAnonymousMembers(symbol, 0);
         } else {
             // Check for redefinition errors:
             // - STL itself will tell us if there is a direct name collision, with name mangling, at this level
@@ -330,24 +345,45 @@ public:
                 level.insert(tLevelPair(insertName, &symbol));
 
                 return true;
-            } else {
-                result = level.insert(tLevelPair(insertName, &symbol));
-
-                return result.second;
-            }
+            } else
+                return level.insert(tLevelPair(insertName, &symbol)).second;
         }
+    }
+
+    // Add more members to an already inserted aggregate object
+    bool amend(TSymbol& symbol, int firstNewMember)
+    {
+        // See insert() for comments on basic explanation of insert.
+        // This operates similarly, but more simply.
+        // Only supporting amend of anonymous blocks so far.
+        if (IsAnonymous(symbol.getName()))
+            return insertAnonymousMembers(symbol, firstNewMember);
+        else
+            return false;
+    }
+
+    bool insertAnonymousMembers(TSymbol& symbol, int firstMember)
+    {
+        const TTypeList& types = *symbol.getAsVariable()->getType().getStruct();
+        for (unsigned int m = firstMember; m < types.size(); ++m) {
+            TAnonMember* member = new TAnonMember(&types[m].type->getFieldName(), m, *symbol.getAsVariable(), symbol.getAsVariable()->getAnonId());
+            if (! level.insert(tLevelPair(member->getMangledName(), member)).second)
+                return false;
+        }
+
+        return true;
     }
 
     TSymbol* find(const TString& name) const
     {
         tLevel::const_iterator it = level.find(name);
-        if (it == level.end()) 
+        if (it == level.end())
             return 0;
         else
             return (*it).second;
     }
 
-    void findFunctionNameList(const TString& name, TVector<TFunction*>& list)
+    void findFunctionNameList(const TString& name, TVector<const TFunction*>& list)
     {
         size_t parenAt = name.find_first_of('(');
         TString base(name, 0, parenAt + 1);
@@ -464,7 +500,7 @@ public:
         while (table.size() > adoptedLevels)
             pop(0);
     }
-    
+
     void adoptLevels(TSymbolTable& symTable)
     {
         for (unsigned int level = 0; level < symTable.table.size(); ++level) {
@@ -496,7 +532,7 @@ public:
 
     void setNoBuiltInRedeclarations() { noBuiltInRedeclarations = true; }
     void setSeparateNameSpaces() { separateNameSpaces = true; }
-    
+
     void push()
     {
         table.push_back(new TSymbolTableLevel);
@@ -522,7 +558,7 @@ public:
         // make sure there isn't a function of this variable name
         if (! separateNameSpaces && ! symbol.getAsFunction() && table[currentLevel()]->hasFunctionName(symbol.getName()))
             return false;
-            
+
         // check for not overloading or redefining a built-in function
         if (noBuiltInRedeclarations) {
             if (atGlobalLevel() && currentLevel() > 0) {
@@ -536,9 +572,17 @@ public:
         return table[currentLevel()]->insert(symbol, separateNameSpaces);
     }
 
+    // Add more members to an already inserted aggregate object
+    bool amend(TSymbol& symbol, int firstNewMember)
+    {
+        // See insert() for comments on basic explanation of insert.
+        // This operates similarly, but more simply.
+        return table[currentLevel()]->amend(symbol, firstNewMember);
+    }
+
     //
     // To allocate an internal temporary, which will need to be uniquely
-    // identified by the consumer of the AST, but never need to 
+    // identified by the consumer of the AST, but never need to
     // found by doing a symbol table search by name, hence allowed an
     // arbitrary name in the symbol with no worry of collision.
     //
@@ -614,7 +658,7 @@ public:
         return false;
     }
 
-    void findFunctionNameList(const TString& name, TVector<TFunction*>& list, bool& builtIn)
+    void findFunctionNameList(const TString& name, TVector<const TFunction*>& list, bool& builtIn)
     {
         // For user levels, return the set found in the first scope with a match
         builtIn = false;
@@ -640,7 +684,7 @@ public:
         for (unsigned int level = 0; level < table.size(); ++level)
             table[level]->relateToOperator(name, op);
     }
-    
+
     void setFunctionExtensions(const char* name, int num, const char* const extensions[])
     {
         for (unsigned int level = 0; level < table.size(); ++level)

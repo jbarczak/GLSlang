@@ -1,12 +1,8 @@
-#version 120
+#version 140
 
-uniform vec4 u[3];
+vec4 u[3];
 
-#ifdef TEST_POST_110
-varying vec2 v[];
-#else
-varying vec2 v[2];
-#endif
+in vec2 v[2];
 
 void main()
 {

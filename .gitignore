@@ -5,11 +5,13 @@
 *.opensdf
 *.sdf
 tags
+TAGS
 build/
 lib/
 Test/localResults/
 Test/multiThread.out
 Test/singleThread.out
+<<<<<<< HEAD
 UserM_Release/
 glslang/MachineIndependent/glslang_tab.cpp
 glslang/MachineIndependent/glslang_tab.cpp.h
@@ -17,3 +19,8 @@ glslang/UserM_Debug/
 glslang/UserM_Debug64/
 glslang/UserM_Release/
 glslang/UserM_Release64/
+=======
+Test/vert.spv
+Test/frag.spv
+External/googletest
+>>>>>>> 927608b393a506195a7983f08e916ed6f724831e

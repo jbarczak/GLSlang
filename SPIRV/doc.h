@@ -1,11 +1,11 @@
 //
-//Copyright (C) 2014-2015 LunarG, Inc.
+// Copyright (C) 2014-2015 LunarG, Inc.
 //
-//All rights reserved.
+// All rights reserved.
 //
-//Redistribution and use in source and binary forms, with or without
-//modification, are permitted provided that the following conditions
-//are met:
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
 //
 //    Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
@@ -19,22 +19,18 @@
 //    contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-//"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-//LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-//FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-//COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-//INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-//LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-//ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-//POSSIBILITY OF SUCH DAMAGE.
-
-//
-// Author: John Kessenich, LunarG
-//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
 //
 // Parameterize the SPIR-V enumerants.
@@ -67,6 +63,8 @@ const char* SamplerFilterModeString(int);
 const char* ImageFormatString(int);
 const char* ImageChannelOrderString(int);
 const char* ImageChannelTypeString(int);
+const char* ImageChannelDataTypeString(int type);
+const char* ImageOperandsString(int format);
 const char* ImageOperands(int);
 const char* FPFastMathString(int);
 const char* FPRoundingModeString(int);
@@ -81,6 +79,7 @@ const char* KernelEnqueueFlagsString(int);
 const char* KernelProfilingInfoString(int);
 const char* CapabilityString(int);
 const char* OpcodeString(int);
+const char* ScopeString(int mem);
 
 // For grouping opcodes into subsections
 enum OpcodeClass {
@@ -116,10 +115,9 @@ enum OpcodeClass {
 enum OperandClass {
     OperandNone,
     OperandId,
-    OperandOptionalId,
-    OperandOptionalImage,
     OperandVariableIds,
     OperandOptionalLiteral,
+    OperandOptionalLiteralString,
     OperandVariableLiterals,
     OperandVariableIdLiteral,
     OperandVariableLiteralId,
@@ -151,7 +149,7 @@ enum OperandClass {
     OperandMemorySemantics,
     OperandMemoryAccess,
     OperandScope,
-	OperandGroupOperation,
+    OperandGroupOperation,
     OperandKernelEnqueueFlags,
     OperandKernelProfilingInfo,
     OperandCapability,
@@ -168,18 +166,22 @@ typedef std::vector<Capability> EnumCaps;
 class OperandParameters {
 public:
     OperandParameters() { }
-    void push(OperandClass oc, const char* d)
+    void push(OperandClass oc, const char* d, bool opt = false)
     {
         opClass.push_back(oc);
         desc.push_back(d);
+        optional.push_back(opt);
     }
+    void setOptional();
     OperandClass getClass(int op) const { return opClass[op]; }
     const char* getDesc(int op) const { return desc[op]; }
+    bool isOptional(int op) const { return optional[op]; }
     int getNum() const { return (int)opClass.size(); }
 
 protected:
     std::vector<OperandClass> opClass;
     std::vector<const char*> desc;
+    std::vector<bool> optional;
 };
 
 // Parameterize an enumerant
@@ -240,7 +242,7 @@ protected:
     int resultPresent : 1;
 };
 
-const int OpcodeCeiling = 305;
+const int OpcodeCeiling = 321;
 
 // The set of objects that hold all the instruction/operand
 // parameterization information.

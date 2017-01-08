@@ -1,11 +1,11 @@
 //
-//Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
-//Copyright (C) 2013 LunarG, Inc.
-//All rights reserved.
+// Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
+// Copyright (C) 2013 LunarG, Inc.
+// All rights reserved.
 //
-//Redistribution and use in source and binary forms, with or without
-//modification, are permitted provided that the following conditions
-//are met:
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
 //
 //    Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
@@ -19,18 +19,18 @@
 //    contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-//"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-//LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-//FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-//COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-//INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-//LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-//ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-//POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 //
 /****************************************************************************\
 Copyright (c) 2002, NVIDIA Corporation.
@@ -57,7 +57,7 @@ Except as expressly stated in this notice, no other rights or licenses
 express or implied, are granted by NVIDIA herein, including but not
 limited to any patent rights that may be infringed by your derivative
 works or by other works in which the NVIDIA Software may be
-incorporated. No hardware is licensed hereunder. 
+incorporated. No hardware is licensed hereunder.
 
 THE NVIDIA SOFTWARE IS BEING PROVIDED ON AN "AS IS" BASIS, WITHOUT
 WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED,
@@ -75,33 +75,17 @@ NVIDIA SOFTWARE, HOWEVER CAUSED AND WHETHER UNDER THEORY OF CONTRACT,
 TORT (INCLUDING NEGLIGENCE), STRICT LIABILITY OR OTHERWISE, EVEN IF
 NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \****************************************************************************/
-//
-// scanner.c
-//
 
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 #include "PpContext.h"
 #include "PpTokens.h"
 #include "../Scan.h"
 
 namespace glslang {
-
-int TPpContext::InitScanner()
-{
-    // Add various atoms needed by the CPP line scanner:
-    if (!InitCPP())
-        return 0;
-
-    previous_token = '\n';
-
-    return 1;
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// Floating point constants: /////////////////////////////////
@@ -119,6 +103,10 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
     int declen;
     int str_len;
     int isDouble = 0;
+#ifdef AMD_EXTENSIONS
+    int isFloat16 = 0;
+    bool enableFloat16 = parseContext.version >= 450 && parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float);
+#endif
 
     declen = 0;
 
@@ -202,6 +190,28 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
                     len = 1,str_len=1;
                 }
             }
+#ifdef AMD_EXTENSIONS
+        } else if (enableFloat16 && (ch == 'h' || ch == 'H')) {
+            parseContext.float16Check(ppToken->loc, "half floating-point suffix");
+            if (!HasDecimalOrExponent)
+                parseContext.ppError(ppToken->loc, "float literal needs a decimal point or exponent", "", "");
+            int ch2 = getChar();
+            if (ch2 != 'f' && ch2 != 'F') {
+                ungetChar();
+                ungetChar();
+            }
+            else {
+                if (len < MaxTokenLength) {
+                    str[len++] = (char)ch;
+                    str[len++] = (char)ch2;
+                    isFloat16 = 1;
+                }
+                else {
+                    parseContext.ppError(ppToken->loc, "float literal too long", "", "");
+                    len = 1, str_len = 1;
+                }
+            }
+#endif
         } else if (ch == 'f' || ch == 'F') {
             parseContext.profileRequires(ppToken->loc,  EEsProfile, 300, nullptr, "floating-point suffix");
             if (! parseContext.relaxedErrors())
@@ -214,7 +224,7 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
                 parseContext.ppError(ppToken->loc, "float literal too long", "", "");
                 len = 1,str_len=1;
             }
-        } else 
+        } else
             ungetChar();
 
         str[len]='\0';
@@ -224,6 +234,10 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 
     if (isDouble)
         return PpAtomConstDouble;
+#ifdef AMD_EXTENSIONS
+    else if (isFloat16)
+        return PpAtomConstFloat16;
+#endif
     else
         return PpAtomConstFloat;
 }
@@ -233,20 +247,21 @@ int TPpContext::lFloatConst(int len, int ch, TPpToken* ppToken)
 //
 int TPpContext::tStringInput::scan(TPpToken* ppToken)
 {
-    char* tokenText = ppToken->name;
     int AlreadyComplained = 0;
     int len = 0;
     int ch = 0;
     int ii = 0;
-    unsigned ival = 0;
+    unsigned long long ival = 0;
+    bool enableInt64 = pp->parseContext.version >= 450 && pp->parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_int64);
 
     ppToken->ival = 0;
+    ppToken->i64val = 0;
     ppToken->space = false;
-    ch = pp->getChar();
+    ch = getch();
     for (;;) {
         while (ch == ' ' || ch == '\t') {
             ppToken->space = true;
-            ch = pp->getChar();
+            ch = getch();
         }
 
         ppToken->loc = pp->parseContext.getCurrentLoc();
@@ -270,14 +285,14 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
         case 'z':
             do {
                 if (len < MaxTokenLength) {
-                    tokenText[len++] = (char)ch;
-                    ch = pp->getChar();
+                    ppToken->name[len++] = (char)ch;
+                    ch = getch();
                 } else {
                     if (! AlreadyComplained) {
                         pp->parseContext.ppError(ppToken->loc, "name too long", "", "");
                         AlreadyComplained = 1;
                     }
-                    ch = pp->getChar();
+                    ch = getch();
                 }
             } while ((ch >= 'a' && ch <= 'z') ||
                      (ch >= 'A' && ch <= 'Z') ||
@@ -288,26 +303,26 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
             if (len == 0)
                 continue;
 
-            tokenText[len] = '\0';
-            pp->ungetChar();
-            ppToken->atom = pp->LookUpAddString(tokenText);
+            ppToken->name[len] = '\0';
+            ungetch();
             return PpAtomIdentifier;
         case '0':
             ppToken->name[len++] = (char)ch;
-            ch = pp->getChar();
+            ch = getch();
             if (ch == 'x' || ch == 'X') {
-                // must be hexidecimal
+                // must be hexadecimal
 
                 bool isUnsigned = false;
+                bool isInt64 = false;
                 ppToken->name[len++] = (char)ch;
-                ch = pp->getChar();
+                ch = getch();
                 if ((ch >= '0' && ch <= '9') ||
                     (ch >= 'A' && ch <= 'F') ||
                     (ch >= 'a' && ch <= 'f')) {
 
                     ival = 0;
                     do {
-                        if (ival <= 0x0fffffff) {
+                        if (ival <= 0x0fffffff || (enableInt64 && ival <= 0x0fffffffffffffffull)) {
                             ppToken->name[len++] = (char)ch;
                             if (ch >= '0' && ch <= '9') {
                                 ii = ch - '0';
@@ -316,39 +331,57 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                             } else if (ch >= 'a' && ch <= 'f') {
                                 ii = ch - 'a' + 10;
                             } else
-                                pp->parseContext.ppError(ppToken->loc, "bad digit in hexidecimal literal", "", "");
+                                pp->parseContext.ppError(ppToken->loc, "bad digit in hexadecimal literal", "", "");
                             ival = (ival << 4) | ii;
                         } else {
                             if (! AlreadyComplained) {
-                                pp->parseContext.ppError(ppToken->loc, "hexidecimal literal too big", "", "");
+                                pp->parseContext.ppError(ppToken->loc, "hexadecimal literal too big", "", "");
                                 AlreadyComplained = 1;
                             }
-                            ival = 0xffffffff;
+                            ival = 0xffffffffffffffffull;
                         }
-                        ch = pp->getChar();
+                        ch = getch();
                     } while ((ch >= '0' && ch <= '9') ||
                              (ch >= 'A' && ch <= 'F') ||
                              (ch >= 'a' && ch <= 'f'));
                 } else {
-                    pp->parseContext.ppError(ppToken->loc, "bad digit in hexidecimal literal", "", "");
+                    pp->parseContext.ppError(ppToken->loc, "bad digit in hexadecimal literal", "", "");
                 }
                 if (ch == 'u' || ch == 'U') {
                     if (len < MaxTokenLength)
                         ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
-                } else
-                    pp->ungetChar();
-                ppToken->name[len] = '\0';
-                ppToken->ival = (int)ival;
 
-                if (isUnsigned)
-                    return PpAtomConstUint;
-                else
-                    return PpAtomConstInt;
+                    if (enableInt64) {
+                        int nextCh = getch();
+                        if ((ch == 'u' && nextCh == 'l') || (ch == 'U' && nextCh == 'L')) {
+                            if (len < MaxTokenLength)
+                                ppToken->name[len++] = (char)nextCh;
+                            isInt64 = true;
+                        } else
+                            ungetch();
+                    }
+                }
+                else if (enableInt64 && (ch == 'l' || ch == 'L')) {
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
+                    isInt64 = true;
+                } else
+                    ungetch();
+                ppToken->name[len] = '\0';
+
+                if (isInt64) {
+                    ppToken->i64val = ival;
+                    return isUnsigned ? PpAtomConstUint64 : PpAtomConstInt64;
+                } else {
+                    ppToken->ival = (int)ival;
+                    return isUnsigned ? PpAtomConstUint : PpAtomConstInt;
+                }
             } else {
                 // could be octal integer or floating point, speculative pursue octal until it must be floating point
 
                 bool isUnsigned = false;
+                bool isInt64 = false;
                 bool octalOverflow = false;
                 bool nonOctal = false;
                 ival = 0;
@@ -361,12 +394,12 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                         pp->parseContext.ppError(ppToken->loc, "numeric literal too long", "", "");
                         AlreadyComplained = 1;
                     }
-                    if (ival <= 0x1fffffff) {
+                    if (ival <= 0x1fffffff || (enableInt64 && ival <= 0x1fffffffffffffffull)) {
                         ii = ch - '0';
                         ival = (ival << 3) | ii;
                     } else
                         octalOverflow = true;
-                    ch = pp->getChar();
+                    ch = getch();
                 }
 
                 // could be part of a float...
@@ -379,12 +412,12 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                             pp->parseContext.ppError(ppToken->loc, "numeric literal too long", "", "");
                             AlreadyComplained = 1;
                         }
-                        ch = pp->getChar();
+                        ch = getch();
                     } while (ch >= '0' && ch <= '9');
                 }
-                if (ch == '.' || ch == 'e' || ch == 'f' || ch == 'E' || ch == 'F' || ch == 'l' || ch == 'L') 
+                if (ch == '.' || ch == 'e' || ch == 'f' || ch == 'E' || ch == 'F')
                     return pp->lFloatConst(len, ch, ppToken);
-                
+
                 // wasn't a float, so must be octal...
                 if (nonOctal)
                     pp->parseContext.ppError(ppToken->loc, "octal literal digit too large", "", "");
@@ -393,24 +426,40 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                     if (len < MaxTokenLength)
                         ppToken->name[len++] = (char)ch;
                     isUnsigned = true;
+
+                    if (enableInt64) {
+                        int nextCh = getch();
+                        if ((ch == 'u' && nextCh == 'l') || (ch == 'U' && nextCh == 'L')) {
+                            if (len < MaxTokenLength)
+                                ppToken->name[len++] = (char)nextCh;
+                            isInt64 = true;
+                        } else
+                            ungetch();
+                    }
+                }
+                else if (enableInt64 && (ch == 'l' || ch == 'L')) {
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
+                    isInt64 = true;
                 } else
-                    pp->ungetChar();
+                    ungetch();
                 ppToken->name[len] = '\0';
 
                 if (octalOverflow)
                     pp->parseContext.ppError(ppToken->loc, "octal literal too big", "", "");
 
-                ppToken->ival = (int)ival;
-
-                if (isUnsigned)
-                    return PpAtomConstUint;
-                else
-                    return PpAtomConstInt;
+                if (isInt64) {
+                    ppToken->i64val = ival;
+                    return isUnsigned ? PpAtomConstUint64 : PpAtomConstInt64;
+                } else {
+                    ppToken->ival = (int)ival;
+                    return isUnsigned ? PpAtomConstUint : PpAtomConstInt;
+                }
             }
             break;
         case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
-            // can't be hexidecimal or octal, is either decimal or floating point
+            // can't be hexadecimal or octal, is either decimal or floating point
 
             do {
                 if (len < MaxTokenLength)
@@ -419,190 +468,210 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                     pp->parseContext.ppError(ppToken->loc, "numeric literal too long", "", "");
                     AlreadyComplained = 1;
                 }
-                ch = pp->getChar();
+                ch = getch();
             } while (ch >= '0' && ch <= '9');
-            if (ch == '.' || ch == 'e' || ch == 'f' || ch == 'E' || ch == 'F' || ch == 'l' || ch == 'L') {
+            if (ch == '.' || ch == 'e' || ch == 'f' || ch == 'E' || ch == 'F') {
                 return pp->lFloatConst(len, ch, ppToken);
             } else {
                 // Finish handling signed and unsigned integers
                 int numericLen = len;
-                bool uint = false;
+                bool isUnsigned = false;
+                bool isInt64 = false;
                 if (ch == 'u' || ch == 'U') {
                     if (len < MaxTokenLength)
                         ppToken->name[len++] = (char)ch;
-                    uint = true;
+                    isUnsigned = true;
+
+                    if (enableInt64) {
+                        int nextCh = getch();
+                        if ((ch == 'u' && nextCh == 'l') || (ch == 'U' && nextCh == 'L')) {
+                            if (len < MaxTokenLength)
+                                ppToken->name[len++] = (char)nextCh;
+                            isInt64 = true;
+                        } else
+                            ungetch();
+                    }
+                } else if (enableInt64 && (ch == 'l' || ch == 'L')) {
+                    if (len < MaxTokenLength)
+                        ppToken->name[len++] = (char)ch;
+                    isInt64 = true;
                 } else
-                    pp->ungetChar();
+                    ungetch();
 
                 ppToken->name[len] = '\0';
                 ival = 0;
                 const unsigned oneTenthMaxInt  = 0xFFFFFFFFu / 10;
                 const unsigned remainderMaxInt = 0xFFFFFFFFu - 10 * oneTenthMaxInt;
+                const unsigned long long oneTenthMaxInt64  = 0xFFFFFFFFFFFFFFFFull / 10;
+                const unsigned long long remainderMaxInt64 = 0xFFFFFFFFFFFFFFFFull - 10 * oneTenthMaxInt64;
                 for (int i = 0; i < numericLen; i++) {
                     ch = ppToken->name[i] - '0';
-                    if ((ival > oneTenthMaxInt) || (ival == oneTenthMaxInt && (unsigned)ch > remainderMaxInt)) {
+                    if ((enableInt64 == false && ((ival > oneTenthMaxInt) || (ival == oneTenthMaxInt && (unsigned)ch > remainderMaxInt))) ||
+                        (enableInt64 && ((ival > oneTenthMaxInt64) || (ival == oneTenthMaxInt64 && (unsigned long long)ch > remainderMaxInt64)))) {
                         pp->parseContext.ppError(ppToken->loc, "numeric literal too big", "", "");
-                        ival = 0xFFFFFFFFu;
+                        ival = 0xFFFFFFFFFFFFFFFFull;
                         break;
                     } else
                         ival = ival * 10 + ch;
                 }
-                ppToken->ival = (int)ival;
 
-                if (uint)
-                    return PpAtomConstUint;
-                else
-                    return PpAtomConstInt;
+                if (isInt64) {
+                    ppToken->i64val = ival;
+                    return isUnsigned ? PpAtomConstUint64 : PpAtomConstInt64;
+                } else {
+                    ppToken->ival = (int)ival;
+                    return isUnsigned ? PpAtomConstUint : PpAtomConstInt;
+                }
             }
             break;
         case '-':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '-') {
                 return PpAtomDecrement;
             } else if (ch == '=') {
-                return PpAtomSub;
+                return PPAtomSubAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '-';
             }
         case '+':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '+') {
                 return PpAtomIncrement;
             } else if (ch == '=') {
-                return PpAtomAdd;
+                return PPAtomAddAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '+';
             }
         case '*':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '=') {
-                return PpAtomMul;
+                return PPAtomMulAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '*';
             }
         case '%':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '=') {
-                return PpAtomMod;
+                return PPAtomModAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '%';
             }
         case '^':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '^') {
                 return PpAtomXor;
             } else {
                 if (ch == '=')
                     return PpAtomXorAssign;
                 else{
-                    pp->ungetChar();
+                    ungetch();
                     return '^';
                 }
             }
 
         case '=':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '=') {
                 return PpAtomEQ;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '=';
             }
         case '!':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '=') {
                 return PpAtomNE;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '!';
             }
         case '|':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '|') {
                 return PpAtomOr;
             } else if (ch == '=') {
                 return PpAtomOrAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '|';
             }
         case '&':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '&') {
                 return PpAtomAnd;
             } else if (ch == '=') {
                 return PpAtomAndAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '&';
             }
         case '<':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '<') {
-                ch = pp->getChar();
+                ch = getch();
                 if (ch == '=')
                     return PpAtomLeftAssign;
                 else {
-                    pp->ungetChar();
+                    ungetch();
                     return PpAtomLeft;
                 }
             } else if (ch == '=') {
                 return PpAtomLE;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '<';
             }
         case '>':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '>') {
-                ch = pp->getChar();
+                ch = getch();
                 if (ch == '=')
                     return PpAtomRightAssign;
                 else {
-                    pp->ungetChar();
+                    ungetch();
                     return PpAtomRight;
                 }
             } else if (ch == '=') {
                 return PpAtomGE;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '>';
             }
         case '.':
-            ch = pp->getChar();
+            ch = getch();
             if (ch >= '0' && ch <= '9') {
-                pp->ungetChar();
+                ungetch();
                 return pp->lFloatConst(0, '.', ppToken);
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '.';
             }
         case '/':
-            ch = pp->getChar();
+            ch = getch();
             if (ch == '/') {
                 pp->inComment = true;
                 do {
-                    ch = pp->getChar();
+                    ch = getch();
                 } while (ch != '\n' && ch != EndOfInput);
                 ppToken->space = true;
                 pp->inComment = false;
 
                 return ch;
             } else if (ch == '*') {
-                ch = pp->getChar();
+                ch = getch();
                 do {
                     while (ch != '*') {
                         if (ch == EndOfInput) {
                             pp->parseContext.ppError(ppToken->loc, "End of input in comment", "comment", "");
                             return ch;
                         }
-                        ch = pp->getChar();
+                        ch = getch();
                     }
-                    ch = pp->getChar();
+                    ch = getch();
                     if (ch == EndOfInput) {
                         pp->parseContext.ppError(ppToken->loc, "End of input in comment", "comment", "");
                         return ch;
@@ -612,63 +681,66 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
                 // loop again to get the next token...
                 break;
             } else if (ch == '=') {
-                return PpAtomDiv;
+                return PPAtomDivAssign;
             } else {
-                pp->ungetChar();
+                ungetch();
                 return '/';
             }
             break;
         case '"':
-            ch = pp->getChar();
+            // TODO: If this gets enhanced to handle escape sequences, or
+            // anything that is different than what #include needs, then
+            // #include needs to use scanHeaderName() for this.
+            ch = getch();
             while (ch != '"' && ch != '\n' && ch != EndOfInput) {
                 if (len < MaxTokenLength) {
-                    tokenText[len] = (char)ch;
+                    ppToken->name[len] = (char)ch;
                     len++;
-                    ch = pp->getChar();
+                    ch = getch();
                 } else
                     break;
             };
-            tokenText[len] = '\0';
+            ppToken->name[len] = '\0';
             if (ch != '"') {
-                pp->ungetChar();
+                ungetch();
                 pp->parseContext.ppError(ppToken->loc, "End of line in string", "string", "");
             }
             return PpAtomConstString;
         }
 
-        ch = pp->getChar();
+        ch = getch();
     }
 }
 
 //
-// The main functional entry-point into the preprocessor, which will
+// The main functional entry point into the preprocessor, which will
 // scan the source strings to figure out and return the next processing token.
 //
-// Return string pointer to next token.
-// Return 0 when no more tokens.
+// Return the token, or EndOfInput when no more tokens.
 //
-const char* TPpContext::tokenize(TPpToken* ppToken)
-{    
-    int token = '\n';
-
+int TPpContext::tokenize(TPpToken& ppToken)
+{
     for(;;) {
-        token = scanToken(ppToken);
-        ppToken->token = token;
+        int token = scanToken(&ppToken);
+
+        // Handle token-pasting logic
+        token = tokenPaste(token, ppToken);
+
         if (token == EndOfInput) {
             missingEndifCheck();
-            return nullptr;
+            return EndOfInput;
         }
         if (token == '#') {
             if (previous_token == '\n') {
-                token = readCPPline(ppToken);
+                token = readCPPline(&ppToken);
                 if (token == EndOfInput) {
                     missingEndifCheck();
-                    return nullptr;
+                    return EndOfInput;
                 }
                 continue;
             } else {
-                parseContext.ppError(ppToken->loc, "preprocessor directive cannot be preceded by another token", "#", "");
-                return nullptr;
+                parseContext.ppError(ppToken.loc, "preprocessor directive cannot be preceded by another token", "#", "");
+                return EndOfInput;
             }
         }
         previous_token = token;
@@ -677,36 +749,122 @@ const char* TPpContext::tokenize(TPpToken* ppToken)
             continue;
 
         // expand macros
-        if (token == PpAtomIdentifier && MacroExpand(ppToken->atom, ppToken, false, true) != 0)
+        if (token == PpAtomIdentifier && MacroExpand(&ppToken, false, true) != 0)
             continue;
 
-        const char* tokenString = nullptr;
         switch (token) {
         case PpAtomIdentifier:
         case PpAtomConstInt:
         case PpAtomConstUint:
         case PpAtomConstFloat:
+        case PpAtomConstInt64:
+        case PpAtomConstUint64:
         case PpAtomConstDouble:
-            tokenString = ppToken->name;
+#ifdef AMD_EXTENSIONS
+        case PpAtomConstFloat16:
+#endif
+            if (ppToken.name[0] == '\0')
+                continue;
             break;
         case PpAtomConstString:
-            parseContext.ppError(ppToken->loc, "string literals not supported", "\"\"", "");
+            if (parseContext.intermediate.getSource() != EShSourceHlsl) {
+                // HLSL allows string literals.
+                parseContext.ppError(ppToken.loc, "string literals not supported", "\"\"", "");
+                continue;
+            }
             break;
         case '\'':
-            parseContext.ppError(ppToken->loc, "character literals not supported", "\'", "");
+            parseContext.ppError(ppToken.loc, "character literals not supported", "\'", "");
+            continue;
+        default:
+            strcpy(ppToken.name, atomStrings.getString(token));
+            break;
+        }
+
+        return token;
+    }
+}
+
+//
+// Do all token-pasting related combining of two pasted tokens when getting a
+// stream of tokens from a replacement list. Degenerates to no processing if a
+// replacement list is not the source of the token stream.
+//
+int TPpContext::tokenPaste(int token, TPpToken& ppToken)
+{
+    // starting with ## is illegal, skip to next token
+    if (token == PpAtomPaste) {
+        parseContext.ppError(ppToken.loc, "unexpected location", "##", "");
+        return scanToken(&ppToken);
+    }
+
+    int resultToken = token; // "foo" pasted with "35" is an identifier, not a number
+
+    // ## can be chained, process all in the chain at once
+    while (peekPasting()) {
+        TPpToken pastedPpToken;
+
+        // next token has to be ##
+        token = scanToken(&pastedPpToken);
+        assert(token == PpAtomPaste);
+
+        if (endOfReplacementList()) {
+            parseContext.ppError(ppToken.loc, "unexpected location; end of replacement list", "##", "");
+            break;
+        }
+
+        // get the token after the ##
+        token = scanToken(&pastedPpToken);
+
+        // get the token text
+        switch (resultToken) {
+        case PpAtomIdentifier:
+            // already have the correct text in token.names
+            break;
+        case '=':
+        case '!':
+        case '-':
+        case '~':
+        case '+':
+        case '*':
+        case '/':
+        case '%':
+        case '<':
+        case '>':
+        case '|':
+        case '^':
+        case '&':
+        case PpAtomRight:
+        case PpAtomLeft:
+        case PpAtomAnd:
+        case PpAtomOr:
+        case PpAtomXor:
+            strcpy(ppToken.name, atomStrings.getString(resultToken));
+            strcpy(pastedPpToken.name, atomStrings.getString(token));
             break;
         default:
-            tokenString = GetAtomString(token);
-            break;
+            parseContext.ppError(ppToken.loc, "not supported for these tokens", "##", "");
+            return resultToken;
         }
 
-        if (tokenString) {
-            if (tokenString[0] != 0)
-                parseContext.tokensBeforeEOF = 1;
+        // combine the tokens
+        if (strlen(ppToken.name) + strlen(pastedPpToken.name) > MaxTokenLength) {
+            parseContext.ppError(ppToken.loc, "combined tokens are too long", "##", "");
+            return resultToken;
+        }
+        strncat(ppToken.name, pastedPpToken.name, MaxTokenLength - strlen(ppToken.name));
 
-            return tokenString;
+        // correct the kind of token we are making, if needed (identifiers stay identifiers)
+        if (resultToken != PpAtomIdentifier) {
+            int newToken = atomStrings.getAtom(ppToken.name);
+            if (newToken > 0)
+                resultToken = newToken;
+            else
+                parseContext.ppError(ppToken.loc, "combined token is invalid", "##", "");
         }
     }
+
+    return resultToken;
 }
 
 // Checks if we've seen balanced #if...#endif

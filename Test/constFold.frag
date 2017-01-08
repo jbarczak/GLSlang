@@ -119,3 +119,30 @@ void foo2()
     float f = vec4(7.8 < 2.4 ? -1.333 : 1.444).a;
     f = vec4(inv.x < 2.4 ? -1.0 : 1.0).a;  // not folded, ensuring no propagation
 }
+
+const mat2 mm2 = mat2(1.0, 2.0, 3.0, 4.0);
+const mat3x2 mm32 = mat3x2(10.0, 11.0, 12.0, 13.0, 14.0, 15.0);
+
+void foo3()
+{
+    mat3x2 r32 = mm2 * mm32;
+}
+
+struct cag {
+    int   i;
+    float f;
+    bool  b;
+};
+const cag a0[3] = cag[3](cag(3, 2.0, true), cag(1, 5.0, true), cag(1, 9.0, false));
+
+void foo4()
+{
+    int a = int(a0[2].f);
+}
+
+const bool cval1 = all(bvec4(true, true, true, true));
+const bool cval2 = all(bvec4(false, false, false, false));
+const bool cval3 = all(bvec4(true, true, false, true));
+const bool cval4 = any(bvec4(true, true, true, true));
+const bool cval5 = any(bvec4(false, false, false, false));
+const bool cval6 = any(bvec4(false, true, false, false));

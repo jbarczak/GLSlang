@@ -1,7 +1,7 @@
-#version 130
+#version 140
 
-uniform sampler2D sampler;
-varying vec2 coord;
+uniform sampler2D samp2D;
+in vec2 coord;
 
 struct s0 {
     int i;
@@ -31,12 +31,12 @@ struct s3 {
 };
 
 
-uniform s0 foo0;
-uniform s1 foo1;
-uniform s2 foo2;
-uniform s3 foo3;
+s0 foo0;
+s1 foo1;
+s2 foo2;
+s3 foo3;
 
-uniform s00 foo00;
+s00 foo00;
 
 void main()
 {
@@ -67,5 +67,5 @@ void main()
     if (locals0.i > 5)
         locals0 = locals00.s0_0;
 
-    gl_FragColor = (float(locals0.i) + locals1Array[6].f + fArray[3] + locals2.s1_1.f) * texture2D(sampler, coord);
+    gl_FragColor = (float(locals0.i) + locals1Array[6].f + fArray[3] + locals2.s1_1.f) * texture(samp2D, coord);
 }

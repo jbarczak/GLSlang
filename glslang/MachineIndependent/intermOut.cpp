@@ -1,12 +1,12 @@
 //
-//Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
-//Copyright (C) 2012-2013 LunarG, Inc.
+// Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
+// Copyright (C) 2012-2016 LunarG, Inc.
 //
-//All rights reserved.
+// All rights reserved.
 //
-//Redistribution and use in source and binary forms, with or without
-//modification, are permitted provided that the following conditions
-//are met:
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
 //
 //    Redistributions of source code must retain the above copyright
 //    notice, this list of conditions and the following disclaimer.
@@ -20,27 +20,27 @@
 //    contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-//"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-//LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-//FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-//COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-//INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-//BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-//LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-//ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-//POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+// COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 //
 
 #include "localintermediate.h"
 #include "../Include/InfoSink.h"
 
 #ifdef _MSC_VER
-#include <float.h>
+#include <cfloat>
 #else
-#include <math.h>
+#include <cmath>
 #endif
 
 namespace {
@@ -48,10 +48,8 @@ namespace {
 bool is_positive_infinity(double x) {
 #ifdef _MSC_VER
   return _fpclass(x) == _FPCLASS_PINF;
-#elif defined __ANDROID__
-  return std::isinf(x) && (x >= 0);
 #else
-  return isinf(x) && (x >= 0);
+  return std::isinf(x) && (x >= 0);
 #endif
 }
 
@@ -96,7 +94,7 @@ protected:
 // Helper functions for printing, not part of traversing.
 //
 
-void OutputTreeText(TInfoSink& infoSink, const TIntermNode* node, const int depth)
+static void OutputTreeText(TInfoSink& infoSink, const TIntermNode* node, const int depth)
 {
     int i;
 
@@ -165,6 +163,8 @@ bool TOutputTraverser::visitBinary(TVisit /* visit */, TIntermBinary* node)
     case EOpGreaterThan:      out.debug << "Compare Greater Than";          break;
     case EOpLessThanEqual:    out.debug << "Compare Less Than or Equal";    break;
     case EOpGreaterThanEqual: out.debug << "Compare Greater Than or Equal"; break;
+    case EOpVectorEqual:      out.debug << "Equal";                         break;
+    case EOpVectorNotEqual:   out.debug << "NotEqual";                      break;
 
     case EOpVectorTimesScalar: out.debug << "vector-scale";          break;
     case EOpVectorTimesMatrix: out.debug << "vector-times-matrix";   break;
@@ -206,22 +206,44 @@ bool TOutputTraverser::visitUnary(TVisit /* visit */, TIntermUnary* node)
     case EOpConvUintToBool:    out.debug << "Convert uint to bool";    break;
     case EOpConvFloatToBool:   out.debug << "Convert float to bool";   break;
     case EOpConvDoubleToBool:  out.debug << "Convert double to bool";  break;
+    case EOpConvInt64ToBool:   out.debug << "Convert int64 to bool";   break;
+    case EOpConvUint64ToBool:  out.debug << "Convert uint64 to bool";  break;
     case EOpConvIntToFloat:    out.debug << "Convert int to float";    break;
     case EOpConvUintToFloat:   out.debug << "Convert uint to float";   break;
     case EOpConvDoubleToFloat: out.debug << "Convert double to float"; break;
+    case EOpConvInt64ToFloat:  out.debug << "Convert int64 to float";  break;
+    case EOpConvUint64ToFloat: out.debug << "Convert uint64 to float"; break;
     case EOpConvBoolToFloat:   out.debug << "Convert bool to float";   break;
     case EOpConvUintToInt:     out.debug << "Convert uint to int";     break;
     case EOpConvFloatToInt:    out.debug << "Convert float to int";    break;
     case EOpConvDoubleToInt:   out.debug << "Convert double to int";   break;
     case EOpConvBoolToInt:     out.debug << "Convert bool to int";     break;
+    case EOpConvInt64ToInt:    out.debug << "Convert int64 to int";    break;
+    case EOpConvUint64ToInt:   out.debug << "Convert uint64 to int";   break;
     case EOpConvIntToUint:     out.debug << "Convert int to uint";     break;
     case EOpConvFloatToUint:   out.debug << "Convert float to uint";   break;
     case EOpConvDoubleToUint:  out.debug << "Convert double to uint";  break;
     case EOpConvBoolToUint:    out.debug << "Convert bool to uint";    break;
+    case EOpConvInt64ToUint:   out.debug << "Convert int64 to uint";   break;
+    case EOpConvUint64ToUint:  out.debug << "Convert uint64 to uint";  break;
     case EOpConvIntToDouble:   out.debug << "Convert int to double";   break;
     case EOpConvUintToDouble:  out.debug << "Convert uint to double";  break;
     case EOpConvFloatToDouble: out.debug << "Convert float to double"; break;
     case EOpConvBoolToDouble:  out.debug << "Convert bool to double";  break;
+    case EOpConvInt64ToDouble: out.debug << "Convert int64 to double"; break;
+    case EOpConvUint64ToDouble: out.debug << "Convert uint64 to double";  break;
+    case EOpConvBoolToInt64:   out.debug << "Convert bool to int64";   break;
+    case EOpConvIntToInt64:    out.debug << "Convert int to int64";    break;
+    case EOpConvUintToInt64:   out.debug << "Convert uint to int64";   break;
+    case EOpConvFloatToInt64:  out.debug << "Convert float to int64";  break;
+    case EOpConvDoubleToInt64: out.debug << "Convert double to int64"; break;
+    case EOpConvUint64ToInt64: out.debug << "Convert uint64 to int64"; break;
+    case EOpConvBoolToUint64:  out.debug << "Convert bool to uint64";  break;
+    case EOpConvIntToUint64:   out.debug << "Convert int to uint64";   break;
+    case EOpConvUintToUint64:  out.debug << "Convert uint to uint64";  break;
+    case EOpConvFloatToUint64: out.debug << "Convert float to uint64"; break;
+    case EOpConvDoubleToUint64: out.debug << "Convert double to uint64"; break;
+    case EOpConvInt64ToUint64: out.debug << "Convert uint64 to uint64"; break;
 
     case EOpRadians:        out.debug << "radians";              break;
     case EOpDegrees:        out.debug << "degrees";              break;
@@ -261,6 +283,10 @@ bool TOutputTraverser::visitUnary(TVisit /* visit */, TIntermUnary* node)
     case EOpFloatBitsToUint:out.debug << "floatBitsToUint";      break;
     case EOpIntBitsToFloat: out.debug << "intBitsToFloat";       break;
     case EOpUintBitsToFloat:out.debug << "uintBitsToFloat";      break;
+    case EOpDoubleBitsToInt64:  out.debug << "doubleBitsToInt64";  break;
+    case EOpDoubleBitsToUint64: out.debug << "doubleBitsToUint64"; break;
+    case EOpInt64BitsToDouble:  out.debug << "int64BitsToDouble";  break;
+    case EOpUint64BitsToDouble: out.debug << "uint64BitsToDouble"; break;
     case EOpPackSnorm2x16:  out.debug << "packSnorm2x16";        break;
     case EOpUnpackSnorm2x16:out.debug << "unpackSnorm2x16";      break;
     case EOpPackUnorm2x16:  out.debug << "packUnorm2x16";        break;
@@ -274,6 +300,16 @@ bool TOutputTraverser::visitUnary(TVisit /* visit */, TIntermUnary* node)
     case EOpUnpackUnorm4x8:   out.debug << "UnpackUnorm4x8";     break;
     case EOpPackDouble2x32:   out.debug << "PackDouble2x32";     break;
     case EOpUnpackDouble2x32: out.debug << "UnpackDouble2x32";   break;
+
+    case EOpPackInt2x32:      out.debug << "packInt2x32";        break;
+    case EOpUnpackInt2x32:    out.debug << "unpackInt2x32";      break;
+    case EOpPackUint2x32:     out.debug << "packUint2x32";       break;
+    case EOpUnpackUint2x32:   out.debug << "unpackUint2x32";     break;
+
+#ifdef AMD_EXTENSIONS
+    case EOpPackFloat2x16:    out.debug << "packFloat2x16";      break;
+    case EOpUnpackFloat2x16:  out.debug << "unpackFloat2x16";    break;
+#endif
 
     case EOpLength:         out.debug << "length";               break;
     case EOpNormalize:      out.debug << "normalize";            break;
@@ -317,6 +353,49 @@ bool TOutputTraverser::visitUnary(TVisit /* visit */, TIntermUnary* node)
     case EOpBitCount:               out.debug << "bitCount";              break;
     case EOpFindLSB:                out.debug << "findLSB";               break;
     case EOpFindMSB:                out.debug << "findMSB";               break;
+
+    case EOpNoise:                  out.debug << "noise";                 break;
+
+    case EOpBallot:                 out.debug << "ballot";                break;
+    case EOpReadFirstInvocation:    out.debug << "readFirstInvocation";   break;
+
+    case EOpAnyInvocation:          out.debug << "anyInvocation";         break;
+    case EOpAllInvocations:         out.debug << "allInvocations";        break;
+    case EOpAllInvocationsEqual:    out.debug << "allInvocationsEqual";   break;
+
+    case EOpClip:                   out.debug << "clip";                  break;
+    case EOpIsFinite:               out.debug << "isfinite";              break;
+    case EOpLog10:                  out.debug << "log10";                 break;
+    case EOpRcp:                    out.debug << "rcp";                   break;
+    case EOpSaturate:               out.debug << "saturate";              break;
+
+#ifdef AMD_EXTENSIONS
+    case EOpMinInvocations:             out.debug << "minInvocations";              break;
+    case EOpMaxInvocations:             out.debug << "maxInvocations";              break;
+    case EOpAddInvocations:             out.debug << "addInvocations";              break;
+    case EOpMinInvocationsNonUniform:   out.debug << "minInvocationsNonUniform";    break;
+    case EOpMaxInvocationsNonUniform:   out.debug << "maxInvocationsNonUniform";    break;
+    case EOpAddInvocationsNonUniform:   out.debug << "addInvocationsNonUniform";    break;
+    case EOpMbcnt:                      out.debug << "mbcnt";                       break;
+
+    case EOpCubeFaceIndex:          out.debug << "cubeFaceIndex";         break;
+    case EOpCubeFaceCoord:          out.debug << "cubeFaceCoord";         break;
+
+    case EOpConvBoolToFloat16:      out.debug << "Convert bool to float16";     break;
+    case EOpConvIntToFloat16:       out.debug << "Convert int to float16";      break;
+    case EOpConvUintToFloat16:      out.debug << "Convert uint to float16";     break;
+    case EOpConvFloatToFloat16:     out.debug << "Convert float to float16";    break;
+    case EOpConvDoubleToFloat16:    out.debug << "Convert double to float16";   break;
+    case EOpConvInt64ToFloat16:     out.debug << "Convert int64 to float16";    break;
+    case EOpConvUint64ToFloat16:    out.debug << "Convert uint64 to float16";   break;
+    case EOpConvFloat16ToBool:      out.debug << "Convert float16 to bool";     break;
+    case EOpConvFloat16ToInt:       out.debug << "Convert float16 to int";      break;
+    case EOpConvFloat16ToUint:      out.debug << "Convert float16 to uint";     break;
+    case EOpConvFloat16ToFloat:     out.debug << "Convert float16 to float";    break;
+    case EOpConvFloat16ToDouble:    out.debug << "Convert float16 to double";   break;
+    case EOpConvFloat16ToInt64:     out.debug << "Convert float16 to int64";    break;
+    case EOpConvFloat16ToUint64:    out.debug << "Convert float16 to uint64";   break;
+#endif
 
     default: out.debug.message(EPrefixError, "Bad unary op");
     }
@@ -364,6 +443,14 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpConstructUVec2:   out.debug << "Construct uvec2";   break;
     case EOpConstructUVec3:   out.debug << "Construct uvec3";   break;
     case EOpConstructUVec4:   out.debug << "Construct uvec4";   break;
+    case EOpConstructInt64:   out.debug << "Construct int64_t"; break;
+    case EOpConstructI64Vec2: out.debug << "Construct i64vec2"; break;
+    case EOpConstructI64Vec3: out.debug << "Construct i64vec3"; break;
+    case EOpConstructI64Vec4: out.debug << "Construct i64vec4"; break;
+    case EOpConstructUint64:  out.debug << "Construct uint64_t"; break;
+    case EOpConstructU64Vec2: out.debug << "Construct u64vec2"; break;
+    case EOpConstructU64Vec3: out.debug << "Construct u64vec3"; break;
+    case EOpConstructU64Vec4: out.debug << "Construct u64vec4"; break;
     case EOpConstructMat2x2:  out.debug << "Construct mat2";    break;
     case EOpConstructMat2x3:  out.debug << "Construct mat2x3";  break;
     case EOpConstructMat2x4:  out.debug << "Construct mat2x4";  break;
@@ -381,8 +468,24 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpConstructDMat3x4: out.debug << "Construct dmat3x4"; break;
     case EOpConstructDMat4x2: out.debug << "Construct dmat4x2"; break;
     case EOpConstructDMat4x3: out.debug << "Construct dmat4x3"; break;
-    case EOpConstructDMat4x4: out.debug << "Construct dmat4";  break;
+    case EOpConstructDMat4x4: out.debug << "Construct dmat4";   break;
+#ifdef AMD_EXTENSIONS
+    case EOpConstructFloat16:   out.debug << "Construct float16_t"; break;
+    case EOpConstructF16Vec2:   out.debug << "Construct f16vec2";   break;
+    case EOpConstructF16Vec3:   out.debug << "Construct f16vec3";   break;
+    case EOpConstructF16Vec4:   out.debug << "Construct f16vec4";   break;
+    case EOpConstructF16Mat2x2: out.debug << "Construct f16mat2";   break;
+    case EOpConstructF16Mat2x3: out.debug << "Construct f16mat2x3"; break;
+    case EOpConstructF16Mat2x4: out.debug << "Construct f16mat2x4"; break;
+    case EOpConstructF16Mat3x2: out.debug << "Construct f16mat3x2"; break;
+    case EOpConstructF16Mat3x3: out.debug << "Construct f16mat3";   break;
+    case EOpConstructF16Mat3x4: out.debug << "Construct f16mat3x4"; break;
+    case EOpConstructF16Mat4x2: out.debug << "Construct f16mat4x2"; break;
+    case EOpConstructF16Mat4x3: out.debug << "Construct f16mat4x3"; break;
+    case EOpConstructF16Mat4x4: out.debug << "Construct f16mat4";   break;
+#endif
     case EOpConstructStruct:  out.debug << "Construct structure";  break;
+    case EOpConstructTextureSampler: out.debug << "Construct combined texture-sampler"; break;
 
     case EOpLessThan:         out.debug << "Compare Less Than";             break;
     case EOpGreaterThan:      out.debug << "Compare Greater Than";          break;
@@ -423,6 +526,20 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpMemoryBarrierImage:         out.debug << "MemoryBarrierImage";         break;
     case EOpMemoryBarrierShared:        out.debug << "MemoryBarrierShared";        break;
     case EOpGroupMemoryBarrier:         out.debug << "GroupMemoryBarrier";         break;
+
+    case EOpReadInvocation:             out.debug << "readInvocation";        break;
+
+#ifdef AMD_EXTENSIONS
+    case EOpSwizzleInvocations:         out.debug << "swizzleInvocations";       break;
+    case EOpSwizzleInvocationsMasked:   out.debug << "swizzleInvocationsMasked"; break;
+    case EOpWriteInvocation:            out.debug << "writeInvocation";          break;
+
+    case EOpMin3:                       out.debug << "min3";                  break;
+    case EOpMax3:                       out.debug << "max3";                  break;
+    case EOpMid3:                       out.debug << "mid3";                  break;
+
+    case EOpTime:                       out.debug << "time";                  break;
+#endif
 
     case EOpAtomicAdd:                  out.debug << "AtomicAdd";             break;
     case EOpAtomicMin:                  out.debug << "AtomicMin";             break;
@@ -481,6 +598,17 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
 
     case EOpInterpolateAtSample:   out.debug << "interpolateAtSample";    break;
     case EOpInterpolateAtOffset:   out.debug << "interpolateAtOffset";    break;
+#ifdef AMD_EXTENSIONS
+    case EOpInterpolateAtVertex:   out.debug << "interpolateAtVertex";    break;
+#endif
+
+    case EOpSinCos:                     out.debug << "sincos";                break;
+    case EOpGenMul:                     out.debug << "mul";                   break;
+
+    case EOpAllMemoryBarrierWithGroupSync:    out.debug << "AllMemoryBarrierWithGroupSync";    break;
+    case EOpGroupMemoryBarrierWithGroupSync: out.debug << "GroupMemoryBarrierWithGroupSync"; break;
+    case EOpWorkgroupMemoryBarrier:           out.debug << "WorkgroupMemoryBarrier";           break;
+    case EOpWorkgroupMemoryBarrierWithGroupSync: out.debug << "WorkgroupMemoryBarrierWithGroupSync"; break;
 
     default: out.debug.message(EPrefixError, "Bad aggregation op");
     }
@@ -526,7 +654,7 @@ bool TOutputTraverser::visitSelection(TVisit /* visit */, TIntermSelection* node
     return false;
 }
 
-void OutputConstantUnion(TInfoSink& out, const TIntermTyped* node, const TConstUnionArray& constUnion, int depth)
+static void OutputConstantUnion(TInfoSink& out, const TIntermTyped* node, const TConstUnionArray& constUnion, int depth)
 {
     int size = node->getType().computeNumComponents();
 
@@ -545,6 +673,9 @@ void OutputConstantUnion(TInfoSink& out, const TIntermTyped* node, const TConstU
             break;
         case EbtFloat:
         case EbtDouble:
+#ifdef AMD_EXTENSIONS
+        case EbtFloat16:
+#endif
             {
                 const double value = constUnion[i].getDConst();
                 // Print infinity in a portable way, for test stability.
@@ -579,6 +710,24 @@ void OutputConstantUnion(TInfoSink& out, const TIntermTyped* node, const TConstU
                 out.debug << buf << "\n";
             }
             break;
+        case EbtInt64:
+            {
+                const int maxSize = 300;
+                char buf[maxSize];
+                snprintf(buf, maxSize, "%lld (%s)", constUnion[i].getI64Const(), "const int64_t");
+
+                out.debug << buf << "\n";
+            }
+            break;
+        case EbtUint64:
+            {
+                const int maxSize = 300;
+                char buf[maxSize];
+                snprintf(buf, maxSize, "%llu (%s)", constUnion[i].getU64Const(), "const uint64_t");
+
+                out.debug << buf << "\n";
+            }
+            break;
         default:
             out.info.message(EPrefixInternalError, "Unknown constant", node->getLoc());
             break;
@@ -602,6 +751,11 @@ void TOutputTraverser::visitSymbol(TIntermSymbol* node)
 
     if (! node->getConstArray().empty())
         OutputConstantUnion(infoSink, node, node->getConstArray(), depth + 1);
+    else if (node->getConstSubtree()) {
+        incrementDepth(node);
+        node->getConstSubtree()->traverse(this);
+        decrementDepth();
+    }
 }
 
 bool TOutputTraverser::visitLoop(TVisit /* visit */, TIntermLoop* node)
@@ -753,6 +907,16 @@ void TIntermediate::output(TInfoSink& infoSink, bool tree)
 
     case EShLangCompute:
         infoSink.debug << "local_size = (" << localSize[0] << ", " << localSize[1] << ", " << localSize[2] << ")\n";
+        {
+            if (localSizeSpecId[0] != TQualifier::layoutNotSet ||
+                localSizeSpecId[1] != TQualifier::layoutNotSet ||
+                localSizeSpecId[2] != TQualifier::layoutNotSet) {
+                infoSink.debug << "local_size ids = (" <<
+                    localSizeSpecId[0] << ", " <<
+                    localSizeSpecId[1] << ", " <<
+                    localSizeSpecId[2] << ")\n";
+            }
+        }
         break;
 
     default:

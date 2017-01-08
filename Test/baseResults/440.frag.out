@@ -77,6 +77,11 @@ ERROR: node is still EOpNull!
 0:147            0 (const int)
 0:147        Constant:
 0:147          2 (const int)
+0:150  Function Definition: layer( (global int)
+0:150    Function Parameters: 
+0:152    Sequence
+0:152      Branch: Return with expression
+0:152        'gl_Layer' (flat in int Layer)
 0:?   Linker Objects
 0:?     'a' (layout(location=4 component=2 ) smooth in 2-component vector of float)
 0:?     'b' (layout(location=4 component=1 ) smooth in float)
@@ -106,10 +111,10 @@ ERROR: node is still EOpNull!
 0:?     'inst11' (layout(column_major std430 ) uniform block{layout(column_major std430 offset=12 align=4 ) uniform float f, layout(column_major std430 ) uniform float g})
 0:?     'specExampleErrors' (layout(column_major std140 ) uniform block{layout(column_major std140 offset=0 ) uniform 4-component vector of float a, layout(column_major std140 offset=32 ) uniform 3-component vector of float b, layout(column_major std140 offset=48 ) uniform 2-component vector of float c, layout(column_major std140 offset=56 ) uniform double g, layout(column_major std140 offset=72 ) uniform double h})
 0:?     'specExample' (layout(column_major std140 ) uniform block{layout(column_major std140 offset=0 ) uniform 4-component vector of float a, layout(column_major std140 offset=32 ) uniform 3-component vector of float b, layout(column_major std140 offset=48 ) uniform 2-component vector of float d, layout(column_major std140 offset=64 align=16 ) uniform float e, layout(column_major std140 offset=72 align=2 ) uniform double f, layout(column_major std140 offset=80 ) uniform float h, layout(column_major std140 offset=128 align=64 ) uniform 3-component vector of double i, layout(column_major std140 offset=168 align=8 ) uniform float j})
-0:?     'specExampleErrors430' (layout(column_major std430 ) uniform block{layout(column_major std430 offset=0 ) uniform 4-component vector of float a, layout(column_major std430 offset=32 ) uniform 3-component vector of float b, layout(column_major std430 offset=48 ) uniform 2-component vector of float c, layout(column_major std430 offset=56 ) uniform double g, layout(column_major std430 offset=72 ) uniform double h, layout(column_major std430 offset=80 ) uniform double i})
-0:?     'specExample430' (layout(column_major std430 ) uniform block{layout(column_major std430 offset=0 ) uniform 4-component vector of float a, layout(column_major std430 offset=32 ) uniform 3-component vector of float b, layout(column_major std430 offset=48 ) uniform 2-component vector of float d, layout(column_major std430 offset=64 align=16 ) uniform float e, layout(column_major std430 offset=72 align=2 ) uniform double f, layout(column_major std430 offset=80 ) uniform float h, layout(column_major std430 offset=128 align=64 ) uniform 3-component vector of double i, layout(column_major std430 offset=168 align=8 ) uniform float j})
-0:?     'specExample4300' (layout(column_major std430 align=128 ) uniform block{layout(column_major std430 offset=0 align=128 ) uniform 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) uniform 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) uniform 2-component vector of float d, layout(column_major std430 offset=384 align=128 ) uniform float e, layout(column_major std430 offset=512 align=128 ) uniform double f, layout(column_major std430 offset=640 align=128 ) uniform float h, layout(column_major std430 offset=768 align=128 ) uniform 3-component vector of double i})
-0:?     'specExample4301' (layout(column_major std430 align=128 ) uniform block{layout(column_major std430 offset=0 align=128 ) uniform 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) uniform 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) uniform 2-component vector of float d, layout(column_major std430 offset=512 align=128 ) uniform float e, layout(column_major std430 offset=520 align=8 ) uniform double f, layout(column_major std430 offset=640 align=128 ) uniform float h, layout(column_major std430 offset=768 align=128 ) uniform 3-component vector of double i})
+0:?     'specExampleErrors430' (layout(column_major std430 ) buffer block{layout(column_major std430 offset=0 ) buffer 4-component vector of float a, layout(column_major std430 offset=32 ) buffer 3-component vector of float b, layout(column_major std430 offset=48 ) buffer 2-component vector of float c, layout(column_major std430 offset=56 ) buffer double g, layout(column_major std430 offset=72 ) buffer double h, layout(column_major std430 offset=80 ) buffer double i})
+0:?     'specExample430' (layout(column_major std430 ) buffer block{layout(column_major std430 offset=0 ) buffer 4-component vector of float a, layout(column_major std430 offset=32 ) buffer 3-component vector of float b, layout(column_major std430 offset=48 ) buffer 2-component vector of float d, layout(column_major std430 offset=64 align=16 ) buffer float e, layout(column_major std430 offset=72 align=2 ) buffer double f, layout(column_major std430 offset=80 ) buffer float h, layout(column_major std430 offset=128 align=64 ) buffer 3-component vector of double i, layout(column_major std430 offset=168 align=8 ) buffer float j})
+0:?     'specExample4300' (layout(column_major std430 align=128 ) buffer block{layout(column_major std430 offset=0 align=128 ) buffer 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) buffer 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) buffer 2-component vector of float d, layout(column_major std430 offset=384 align=128 ) buffer float e, layout(column_major std430 offset=512 align=128 ) buffer double f, layout(column_major std430 offset=640 align=128 ) buffer float h, layout(column_major std430 offset=768 align=128 ) buffer 3-component vector of double i})
+0:?     'specExample4301' (layout(column_major std430 align=128 ) buffer block{layout(column_major std430 offset=0 align=128 ) buffer 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) buffer 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) buffer 2-component vector of float d, layout(column_major std430 offset=512 align=128 ) buffer float e, layout(column_major std430 offset=520 align=8 ) buffer double f, layout(column_major std430 offset=640 align=128 ) buffer float h, layout(column_major std430 offset=768 align=128 ) buffer 3-component vector of double i})
 0:?     'aconst' (global 4-element array of int)
 0:?     'bconst' (global 64-element array of int)
 0:?     'sampInArray' (smooth sample in 4-element array of 3-component vector of float)
@@ -117,34 +122,10 @@ ERROR: node is still EOpNull!
 
 Linked fragment stage:
 
-ERROR: Linking fragment stage: Missing entry point: Each stage requires one "void main()" entry point
+ERROR: Linking fragment stage: Missing entry point: Each stage requires one entry point
 
 Shader version: 440
 ERROR: node is still EOpNull!
-0:144  Function Definition: interp( (global void)
-0:144    Function Parameters: 
-0:146    Sequence
-0:146      interpolateAtCentroid (global 2-component vector of float)
-0:146        vector swizzle (temp 2-component vector of float)
-0:146          direct index (smooth sample temp 3-component vector of float)
-0:146            'sampInArray' (smooth sample in 4-element array of 3-component vector of float)
-0:146            Constant:
-0:146              2 (const int)
-0:146          Sequence
-0:146            Constant:
-0:146              0 (const int)
-0:146            Constant:
-0:146              1 (const int)
-0:147      interpolateAtSample (global float)
-0:147        direct index (temp float)
-0:147          direct index (smooth sample temp 3-component vector of float)
-0:147            'sampInArray' (smooth sample in 4-element array of 3-component vector of float)
-0:147            Constant:
-0:147              2 (const int)
-0:147          Constant:
-0:147            0 (const int)
-0:147        Constant:
-0:147          2 (const int)
 0:?   Linker Objects
 0:?     'a' (layout(location=4 component=2 ) smooth in 2-component vector of float)
 0:?     'b' (layout(location=4 component=1 ) smooth in float)
@@ -174,10 +155,10 @@ ERROR: node is still EOpNull!
 0:?     'inst11' (layout(column_major std430 ) uniform block{layout(column_major std430 offset=12 align=4 ) uniform float f, layout(column_major std430 ) uniform float g})
 0:?     'specExampleErrors' (layout(column_major std140 ) uniform block{layout(column_major std140 offset=0 ) uniform 4-component vector of float a, layout(column_major std140 offset=32 ) uniform 3-component vector of float b, layout(column_major std140 offset=48 ) uniform 2-component vector of float c, layout(column_major std140 offset=56 ) uniform double g, layout(column_major std140 offset=72 ) uniform double h})
 0:?     'specExample' (layout(column_major std140 ) uniform block{layout(column_major std140 offset=0 ) uniform 4-component vector of float a, layout(column_major std140 offset=32 ) uniform 3-component vector of float b, layout(column_major std140 offset=48 ) uniform 2-component vector of float d, layout(column_major std140 offset=64 align=16 ) uniform float e, layout(column_major std140 offset=72 align=2 ) uniform double f, layout(column_major std140 offset=80 ) uniform float h, layout(column_major std140 offset=128 align=64 ) uniform 3-component vector of double i, layout(column_major std140 offset=168 align=8 ) uniform float j})
-0:?     'specExampleErrors430' (layout(column_major std430 ) uniform block{layout(column_major std430 offset=0 ) uniform 4-component vector of float a, layout(column_major std430 offset=32 ) uniform 3-component vector of float b, layout(column_major std430 offset=48 ) uniform 2-component vector of float c, layout(column_major std430 offset=56 ) uniform double g, layout(column_major std430 offset=72 ) uniform double h, layout(column_major std430 offset=80 ) uniform double i})
-0:?     'specExample430' (layout(column_major std430 ) uniform block{layout(column_major std430 offset=0 ) uniform 4-component vector of float a, layout(column_major std430 offset=32 ) uniform 3-component vector of float b, layout(column_major std430 offset=48 ) uniform 2-component vector of float d, layout(column_major std430 offset=64 align=16 ) uniform float e, layout(column_major std430 offset=72 align=2 ) uniform double f, layout(column_major std430 offset=80 ) uniform float h, layout(column_major std430 offset=128 align=64 ) uniform 3-component vector of double i, layout(column_major std430 offset=168 align=8 ) uniform float j})
-0:?     'specExample4300' (layout(column_major std430 align=128 ) uniform block{layout(column_major std430 offset=0 align=128 ) uniform 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) uniform 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) uniform 2-component vector of float d, layout(column_major std430 offset=384 align=128 ) uniform float e, layout(column_major std430 offset=512 align=128 ) uniform double f, layout(column_major std430 offset=640 align=128 ) uniform float h, layout(column_major std430 offset=768 align=128 ) uniform 3-component vector of double i})
-0:?     'specExample4301' (layout(column_major std430 align=128 ) uniform block{layout(column_major std430 offset=0 align=128 ) uniform 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) uniform 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) uniform 2-component vector of float d, layout(column_major std430 offset=512 align=128 ) uniform float e, layout(column_major std430 offset=520 align=8 ) uniform double f, layout(column_major std430 offset=640 align=128 ) uniform float h, layout(column_major std430 offset=768 align=128 ) uniform 3-component vector of double i})
+0:?     'specExampleErrors430' (layout(column_major std430 ) buffer block{layout(column_major std430 offset=0 ) buffer 4-component vector of float a, layout(column_major std430 offset=32 ) buffer 3-component vector of float b, layout(column_major std430 offset=48 ) buffer 2-component vector of float c, layout(column_major std430 offset=56 ) buffer double g, layout(column_major std430 offset=72 ) buffer double h, layout(column_major std430 offset=80 ) buffer double i})
+0:?     'specExample430' (layout(column_major std430 ) buffer block{layout(column_major std430 offset=0 ) buffer 4-component vector of float a, layout(column_major std430 offset=32 ) buffer 3-component vector of float b, layout(column_major std430 offset=48 ) buffer 2-component vector of float d, layout(column_major std430 offset=64 align=16 ) buffer float e, layout(column_major std430 offset=72 align=2 ) buffer double f, layout(column_major std430 offset=80 ) buffer float h, layout(column_major std430 offset=128 align=64 ) buffer 3-component vector of double i, layout(column_major std430 offset=168 align=8 ) buffer float j})
+0:?     'specExample4300' (layout(column_major std430 align=128 ) buffer block{layout(column_major std430 offset=0 align=128 ) buffer 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) buffer 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) buffer 2-component vector of float d, layout(column_major std430 offset=384 align=128 ) buffer float e, layout(column_major std430 offset=512 align=128 ) buffer double f, layout(column_major std430 offset=640 align=128 ) buffer float h, layout(column_major std430 offset=768 align=128 ) buffer 3-component vector of double i})
+0:?     'specExample4301' (layout(column_major std430 align=128 ) buffer block{layout(column_major std430 offset=0 align=128 ) buffer 4-component vector of float a, layout(column_major std430 offset=128 align=128 ) buffer 3-component vector of float b, layout(column_major std430 offset=256 align=128 ) buffer 2-component vector of float d, layout(column_major std430 offset=512 align=128 ) buffer float e, layout(column_major std430 offset=520 align=8 ) buffer double f, layout(column_major std430 offset=640 align=128 ) buffer float h, layout(column_major std430 offset=768 align=128 ) buffer 3-component vector of double i})
 0:?     'aconst' (global 4-element array of int)
 0:?     'bconst' (global 64-element array of int)
 0:?     'sampInArray' (smooth sample in 4-element array of 3-component vector of float)

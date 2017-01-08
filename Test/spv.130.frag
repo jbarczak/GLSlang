@@ -1,4 +1,4 @@
-#version 130
+#version 140
 #extension GL_ARB_texture_gather : enable
 
 vec3 a;
@@ -14,9 +14,6 @@ smooth in float fsmooth;
 noperspective in float fnop;
 
 uniform samplerCube sampC;
-
-in vec4 gl_Color;
-flat in vec4 gl_Color;
 
 #extension GL_ARB_texture_rectangle : enable
 
@@ -85,28 +82,6 @@ uniform sampler2DRectShadow s2DRS;
 uniform sampler1D s1D;
 uniform sampler2DShadow s2DS;
 
-uniform float f;
-uniform vec2 v2;
-uniform vec3 v3;
-uniform vec4 v4;
-
-void bar7()
-{
-    vec4 v;
-
-    o += texture2DRect(s2DR, v2);
-    o += texture2DRectProj(s2DR, v3);
-    o += texture2DRectProj(s2DR, v4);
-    o += shadow2DRect(s2DRS, v3);
-    o += shadow2DRectProj(s2DRS, v4);
-
-    o += texture1DGradARB(s1D, f, f, f);
-    o += texture2DProjGradARB(s2D, v, v2, v2);
-    o += shadow2DProjGradARB(s2DS, v, v2, v2);
-
-    o += shadow2DRectProjGradARB(s2DRS, v, v2, v2);
-}
-
 void main()
 {
     o = textureGather(sampC, vec3(0.2));
@@ -115,5 +90,4 @@ void main()
     bar4();
     bar5();
     bar6();
-    bar7();
 }

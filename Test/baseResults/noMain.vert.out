@@ -23,15 +23,13 @@ ERROR: node is still EOpNull!
 
 Linked vertex stage:
 
-ERROR: Linking vertex stage: Missing entry point: Each stage requires one "void main()" entry point
+ERROR: Linking vertex stage: Missing entry point: Each stage requires one entry point
 
 Linked fragment stage:
 
 
 Shader version: 300
 0:? Sequence
-0:3  Function Definition: foo( (global void)
-0:3    Function Parameters: 
 0:?   Linker Objects
 0:?     'gl_VertexID' (gl_VertexId highp int VertexId)
 0:?     'gl_InstanceID' (gl_InstanceId highp int InstanceId)
