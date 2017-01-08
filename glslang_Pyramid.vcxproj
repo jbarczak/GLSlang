@@ -319,6 +319,13 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClCompile Include="glslang\MachineIndependent\reflection.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Scan.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Versions.cpp" />
+    <ClCompile Include="hlsl\hlslAttributes.cpp" />
+    <ClCompile Include="hlsl\hlslGrammar.cpp" />
+    <ClCompile Include="hlsl\hlslOpMap.cpp" />
+    <ClCompile Include="hlsl\hlslParseables.cpp" />
+    <ClCompile Include="hlsl\hlslParseHelper.cpp" />
+    <ClCompile Include="hlsl\hlslScanContext.cpp" />
+    <ClCompile Include="hlsl\hlslTokenStream.cpp" />
     <ClCompile Include="OGLCompilersDLL\InitializeDll.cpp" />
     <ClCompile Include="glslang\MachineIndependent\IntermTraverse.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Intermediate.cpp" />
@@ -346,6 +353,13 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename)1.obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename)1.obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="SPIRV\disassemble.cpp" />
+    <ClCompile Include="SPIRV\doc.cpp" />
+    <ClCompile Include="SPIRV\GlslangToSpv.cpp" />
+    <ClCompile Include="SPIRV\InReadableOrder.cpp" />
+    <ClCompile Include="SPIRV\Logger.cpp" />
+    <ClCompile Include="SPIRV\SpvBuilder.cpp" />
+    <ClCompile Include="SPIRV\SPVRemapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="glslang\MachineIndependent\glslang_tab.cpp.h" />
@@ -363,6 +377,14 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClInclude Include="glslang\MachineIndependent\Scan.h" />
     <ClInclude Include="glslang\MachineIndependent\ScanContext.h" />
     <ClInclude Include="glslang\MachineIndependent\Versions.h" />
+    <ClInclude Include="hlsl\hlslAttributes.h" />
+    <ClInclude Include="hlsl\hlslGrammar.h" />
+    <ClInclude Include="hlsl\hlslOpMap.h" />
+    <ClInclude Include="hlsl\hlslParseables.h" />
+    <ClInclude Include="hlsl\hlslParseHelper.h" />
+    <ClInclude Include="hlsl\hlslScanContext.h" />
+    <ClInclude Include="hlsl\hlslTokens.h" />
+    <ClInclude Include="hlsl\hlslTokenStream.h" />
     <ClInclude Include="OGLCompilersDLL\InitializeDll.h" />
     <ClInclude Include="glslang\Include\InitializeGlobals.h" />
     <ClInclude Include="glslang\Include\PoolAlloc.h" />
@@ -374,6 +396,22 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClInclude Include="glslang\Public\ShaderLang.h" />
     <ClInclude Include="glslang\OSDependent\Windows\osinclude.h" />
     <ClInclude Include="glslang\OSDependent\Linux\osinclude.h" />
+    <ClInclude Include="SPIRV\bitutils.h" />
+    <ClInclude Include="SPIRV\disassemble.h" />
+    <ClInclude Include="SPIRV\doc.h" />
+    <ClInclude Include="SPIRV\GLSL.ext.AMD.h" />
+    <ClInclude Include="SPIRV\GLSL.ext.KHR.h" />
+    <ClInclude Include="SPIRV\GLSL.ext.NV.h" />
+    <ClInclude Include="SPIRV\GLSL.std.450.h" />
+    <ClInclude Include="SPIRV\GLSL450Lib.h" />
+    <ClInclude Include="SPIRV\GlslangToSpv.h" />
+    <ClInclude Include="SPIRV\hex_float.h" />
+    <ClInclude Include="SPIRV\Logger.h" />
+    <ClInclude Include="SPIRV\spirv.h" />
+    <ClInclude Include="SPIRV\spirv.hpp" />
+    <ClInclude Include="SPIRV\SpvBuilder.h" />
+    <ClInclude Include="SPIRV\spvIR.h" />
+    <ClInclude Include="SPIRV\SPVRemapper.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="glslang\MachineIndependent\glslang.y">
