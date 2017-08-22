@@ -190,7 +190,7 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <AdditionalIncludeDirectories>glslang;glslang\MachineIndependent;glslang\OSDependent\Windows;OGLCompilersDLL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32;_CONSOLE;_USRDLL;TEST_EXPORTS;GENERIC_COMPILER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_HLSL;NDEBUG;WIN32;_CONSOLE;_USRDLL;TEST_EXPORTS;GENERIC_COMPILER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -298,6 +298,8 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="glslang\GenericCodeGen\CodeGen.cpp" />
+    <ClCompile Include="glslang\GenericCodeGen\Link.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Constant.cpp" />
     <ClCompile Include="glslang\MachineIndependent\glslang_tab.cpp">
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4065</DisableSpecificWarnings>
@@ -313,10 +315,8 @@ xcopy /y $(IntDir)$(TargetName)$(TargetExt) Test</Command>
     <ClCompile Include="glslang\MachineIndependent\ParseContextBase.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\Pp.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpAtom.cpp" />
-    <ClCompile Include="glslang\MachineIndependent\preprocessor\PpMemory.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpScanner.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpContext.cpp" />
-    <ClCompile Include="glslang\MachineIndependent\preprocessor\PpSymbols.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpTokens.cpp" />
     <ClCompile Include="glslang\MachineIndependent\propagateNoContraction.cpp" />
     <ClCompile Include="glslang\MachineIndependent\reflection.cpp" />

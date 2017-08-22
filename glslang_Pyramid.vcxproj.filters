@@ -9,10 +9,8 @@
     <ClCompile Include="glslang\MachineIndependent\linkValidate.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\Pp.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpAtom.cpp" />
-    <ClCompile Include="glslang\MachineIndependent\preprocessor\PpMemory.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpScanner.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpContext.cpp" />
-    <ClCompile Include="glslang\MachineIndependent\preprocessor\PpSymbols.cpp" />
     <ClCompile Include="glslang\MachineIndependent\preprocessor\PpTokens.cpp" />
     <ClCompile Include="glslang\MachineIndependent\reflection.cpp" />
     <ClCompile Include="glslang\MachineIndependent\Scan.cpp" />
@@ -75,6 +73,8 @@
     <ClCompile Include="glslang\MachineIndependent\iomapper.cpp" />
     <ClCompile Include="glslang\MachineIndependent\ParseContextBase.cpp" />
     <ClCompile Include="glslang\MachineIndependent\propagateNoContraction.cpp" />
+    <ClCompile Include="glslang\GenericCodeGen\Link.cpp" />
+    <ClCompile Include="glslang\GenericCodeGen\CodeGen.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="glslang\MachineIndependent\glslang_tab.cpp.h" />

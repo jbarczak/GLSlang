@@ -10,6 +10,7 @@ TAGS
 build/
 lib/
 Test/localResults/
+<<<<<<< HEAD
 Test/multiThread.out
 Test/singleThread.out
 UserM_Release/
@@ -20,3 +21,6 @@ glslang/UserM_Debug64/
 glslang/UserM_Release/
 glslang/UserM_Release64/
 
+=======
+External/googletest
+>>>>>>> 778806a69246b8921e867e839c9e87ccddc924f2

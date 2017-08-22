@@ -48,6 +48,7 @@
 namespace spv {
     extern "C" {
         // Include C-based headers that don't have a namespace
+        #include "GLSL.ext.KHR.h"
 #ifdef AMD_EXTENSIONS
         #include "GLSL.ext.AMD.h"
 #endif
@@ -67,9 +68,9 @@ namespace spv {
 // Also, the ceilings are declared next to these, to help keep them in sync.
 // Ceilings should be
 //  - one more than the maximum value an enumerant takes on, for non-mask enumerants
-//    (for non-sparse enums, this is the number of enumurants)
+//    (for non-sparse enums, this is the number of enumerants)
 //  - the number of bits consumed by the set of masks
-//    (for non-sparse mask enums, this is the number of enumurants)
+//    (for non-sparse mask enums, this is the number of enumerants)
 //
 
 const int SourceLanguageCeiling = 6; // HLSL todo: need official enumerant
@@ -174,12 +175,13 @@ const char* ExecutionModeString(int mode)
     case 31: return "ContractionOff";
     case 32: return "Bad";
 
+    case 4446:  return "PostDepthCoverage";
     case ExecutionModeCeiling:
     default: return "Bad";
     }
 }
 
-const int StorageClassCeiling = 12;
+const int StorageClassCeiling = 13;
 
 const char* StorageClassString(int StorageClass)
 {
@@ -196,6 +198,7 @@ const char* StorageClassString(int StorageClass)
     case 9:  return "PushConstant";
     case 10: return "AtomicCounter";
     case 11: return "Image";
+    case 12: return "StorageBuffer";
 
     case StorageClassCeiling:
     default: return "Bad";
@@ -262,6 +265,8 @@ const char* DecorationString(int decoration)
 #ifdef NV_EXTENSIONS
     case 5248: return "OverrideCoverageNV";
     case 5250: return "PassthroughNV";
+    case 5252: return "ViewportRelativeNV";
+    case 5256: return "SecondaryViewportRelativeNV";
 #endif
     }
 }
@@ -316,15 +321,13 @@ const char* BuiltInString(int builtIn)
     case 42: return "VertexIndex";                 // TBD: put next to VertexId?
     case 43: return "InstanceIndex";               // TBD: put next to InstanceId?
 
-    case BuiltInCeiling:
-    default: return "Bad";
-
     case 4416: return "SubgroupEqMaskKHR";
     case 4417: return "SubgroupGeMaskKHR";
     case 4418: return "SubgroupGtMaskKHR";
     case 4419: return "SubgroupLeMaskKHR";
     case 4420: return "SubgroupLtMaskKHR";
-
+    case 4438: return "DeviceIndex";
+    case 4440: return "ViewIndex";
     case 4424: return "BaseVertex";
     case 4425: return "BaseInstance";
     case 4426: return "DrawIndex";
@@ -338,6 +341,17 @@ const char* BuiltInString(int builtIn)
     case 4997: return "BaryCoordSmoothSampleAMD";
     case 4998: return "BaryCoordPullModelAMD";
 #endif
+
+#ifdef NV_EXTENSIONS
+    case 5253: return "ViewportMaskNV";
+    case 5257: return "SecondaryPositionNV";
+    case 5258: return "SecondaryViewportMaskNV";
+    case 5261: return "PositionPerViewNV";
+    case 5262: return "ViewportMaskPerViewNV";
+#endif
+
+    case BuiltInCeiling:
+    default: return "Bad";
     }
 }
 
@@ -623,13 +637,15 @@ const char* SelectControlString(int cont)
     }
 }
 
-const int LoopControlCeiling = 2;
+const int LoopControlCeiling = 4;
 
 const char* LoopControlString(int cont)
 {
     switch (cont) {
     case 0:  return "Unroll";
     case 1:  return "DontUnroll";
+    case 2:  return "DependencyInfinite";
+    case 3:  return "DependencyLength";
 
     case LoopControlCeiling:
     default: return "Bad";
@@ -814,16 +830,35 @@ const char* CapabilityString(int info)
     case 56: return "StorageImageWriteWithoutFormat";
     case 57: return "MultiViewport";
 
-    case CapabilityCeiling:
-    default: return "Bad";
-
     case 4423: return "SubgroupBallotKHR";
     case 4427: return "DrawParameters";
+    case 4431: return "SubgroupVoteKHR";
 
-#ifdef NV_EXTENSIONS
-    case 5251: return "GeometryShaderPassthroughNV";
+    case 4433: return "StorageUniformBufferBlock16";
+    case 4434: return "StorageUniform16";
+    case 4435: return "StoragePushConstant16";
+    case 4436: return "StorageInputOutput16";
+
+    case 4437: return "DeviceGroup";
+    case 4439: return "MultiView";
+
+#ifdef AMD_EXTENSIONS
+    case 5009: return "ImageGatherBiasLodAMD";
 #endif
 
+    case 4445: return "AtomicStorageOps";
+
+    case 4447: return "SampleMaskPostDepthCoverage";
+#ifdef NV_EXTENSIONS
+    case 5251: return "GeometryShaderPassthroughNV";
+    case 5254: return "ShaderViewportIndexLayerNV";
+    case 5255: return "ShaderViewportMaskNV";
+    case 5259: return "ShaderStereoViewNV";
+    case 5260: return "PerViewAttributesNV";
+#endif
+
+    case CapabilityCeiling:
+    default: return "Bad";
     }
 }
 
@@ -1152,12 +1187,11 @@ const char* OpcodeString(int op)
     case 319: return "OpAtomicFlagClear";
     case 320: return "OpImageSparseRead";
 
-    case OpcodeCeiling:
-    default:
-        return "Bad";
-
     case 4421: return "OpSubgroupBallotKHR";
     case 4422: return "OpSubgroupFirstInvocationKHR";
+    case 4428: return "OpSubgroupAllKHR";
+    case 4429: return "OpSubgroupAnyKHR";
+    case 4430: return "OpSubgroupAllEqualKHR";
     case 4432: return "OpSubgroupReadInvocationKHR";
 
 #ifdef AMD_EXTENSIONS
@@ -1170,6 +1204,10 @@ const char* OpcodeString(int op)
     case 5006: return "OpGroupUMaxNonUniformAMD";
     case 5007: return "OpGroupSMaxNonUniformAMD";
 #endif
+
+    case OpcodeCeiling:
+    default:
+        return "Bad";
     }
 }
 
@@ -2770,6 +2808,18 @@ void Parameterize()
     InstructionDesc[OpSubgroupBallotKHR].operands.push(OperandId, "'Predicate'");
 
     InstructionDesc[OpSubgroupFirstInvocationKHR].operands.push(OperandId, "'Value'");
+
+    InstructionDesc[OpSubgroupAnyKHR].capabilities.push_back(CapabilitySubgroupVoteKHR);
+    InstructionDesc[OpSubgroupAnyKHR].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpSubgroupAnyKHR].operands.push(OperandId, "'Predicate'");
+
+    InstructionDesc[OpSubgroupAllKHR].capabilities.push_back(CapabilitySubgroupVoteKHR);
+    InstructionDesc[OpSubgroupAllKHR].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpSubgroupAllKHR].operands.push(OperandId, "'Predicate'");
+
+    InstructionDesc[OpSubgroupAllEqualKHR].capabilities.push_back(CapabilitySubgroupVoteKHR);
+    InstructionDesc[OpSubgroupAllEqualKHR].operands.push(OperandScope, "'Execution'");
+    InstructionDesc[OpSubgroupAllEqualKHR].operands.push(OperandId, "'Predicate'");
 
     InstructionDesc[OpSubgroupReadInvocationKHR].capabilities.push_back(CapabilityGroups);
     InstructionDesc[OpSubgroupReadInvocationKHR].operands.push(OperandId, "'Value'");
